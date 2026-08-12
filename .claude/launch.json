@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "colorcraft",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "5580"],
+      "port": 5580
+    }
+  ]
+}
