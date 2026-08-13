@@ -71,6 +71,26 @@
     return [dot(d, f.e1), dot(d, f.e2)];
   }
 
+  /* The three points lie on their own plane by construction, so their plane
+   * coordinates are exact and the triangle they bound is a plain 2D one. */
+  function triangleOf(f) {
+    var a = uvOf(f, f.points[0]);
+    var b = uvOf(f, f.points[1]);
+    var c = uvOf(f, f.points[2]);
+    return {
+      a: a, b: b, c: c,
+      det: (b[1] - c[1]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[1] - c[1])
+    };
+  }
+
+  function insideTriangle(t, u, v) {
+    if (Math.abs(t.det) < 1e-12) return false;
+    var l1 = ((t.b[1] - t.c[1]) * (u - t.c[0]) + (t.c[0] - t.b[0]) * (v - t.c[1])) / t.det;
+    if (l1 < 0) return false;
+    var l2 = ((t.c[1] - t.a[1]) * (u - t.c[0]) + (t.a[0] - t.c[0]) * (v - t.c[1])) / t.det;
+    return l2 >= 0 && l1 + l2 <= 1;
+  }
+
   /* The solid's colour at a position, or false where the plane has passed
    * outside the gamut. Fills lch as a side effect for callers that need it. */
   function sample(model, p, rgb, lch) {
@@ -86,10 +106,14 @@
   }
 
   /* Rasterise the cut face. Transparent wherever the plane is outside the
-   * solid, which is what gives each slice its characteristic silhouette. */
-  function raster(model, frame, size) {
+   * solid, which is what gives each slice its characteristic silhouette.
+   *
+   * With clip on, the three points bound the face as well as orienting it: only
+   * the triangle between them survives. */
+  function raster(model, frame, size, clip) {
     var data = new Uint8ClampedArray(size * size * 4);
     var rgb = [0, 0, 0], lch = [0, 0, 0];
+    var tri = clip ? triangleOf(frame) : null;
 
     for (var j = 0; j < size; j++) {
       /* Negated so +v points up on screen rather than down. */
@@ -97,6 +121,7 @@
 
       for (var i = 0; i < size; i++) {
         var u = ((i / (size - 1)) * 2 - 1) * RADIUS;
+        if (tri && !insideTriangle(tri, u, v)) continue;
         if (!sample(model, pointAt(frame, u, v), rgb, lch)) continue;
 
         var k = (j * size + i) * 4;
@@ -125,7 +150,7 @@
   var MAX_PLANES = 40;
 
   /* One entry per combination, each with its frame and a thumbnail raster. */
-  function build(model, anchors, thumbSize) {
+  function build(model, anchors, thumbSize, clip) {
     if (!anchors || anchors.length < 3) return [];
 
     var pos = anchors.map(function (a) { return positionOf(model, a.rgb); });
@@ -136,7 +161,7 @@
       return {
         combo: c,
         frame: frame,
-        thumb: frame ? raster(model, frame, thumbSize) : null
+        thumb: frame ? raster(model, frame, thumbSize, clip) : null
       };
     });
   }
@@ -152,11 +177,13 @@
 
     var res = o.slice3DRes;
     var rgb = [0, 0, 0], lch = [0, 0, 0];
+    var tri = o.sliceClip ? triangleOf(plane.frame) : null;
 
     for (var j = 0; j <= res; j++) {
       var v = ((j / res) * 2 - 1) * RADIUS;
       for (var i = 0; i <= res; i++) {
         var u = ((i / res) * 2 - 1) * RADIUS;
+        if (tri && !insideTriangle(tri, u, v)) continue;
         if (!sample(model, pointAt(plane.frame, u, v), rgb, lch)) continue;
         b.push(lch[0], lch[1], lch[2], rgb, CC.KIND.SLICE, 0);
       }
@@ -171,6 +198,8 @@
     appendTo: appendTo,
     positionOf: positionOf,
     uvOf: uvOf,
+    triangleOf: triangleOf,
+    insideTriangle: insideTriangle,
     combinations: combinations
   };
 })(this);

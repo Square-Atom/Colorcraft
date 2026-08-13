@@ -35,6 +35,7 @@
     planes: [],
     planeIndex: 0,
     sliceIn3D: true,
+    sliceClip: false,
     slice3DRes: 58,
 
     /* the add-a-color picker */
@@ -201,6 +202,8 @@
       note: function () { return 'Add at least two points.'; } },
 
     { sec: 'planes', type: 'planes' },
+    { sec: 'planes', type: 'check', key: 'sliceClip',
+      label: 'Hide color outside the border', rebuild: true, when: hasPlane },
     { sec: 'planes', type: 'check', key: 'sliceIn3D', label: 'Show the cut in 3D',
       rebuild: true, when: hasPlane },
     { sec: 'planes', type: 'range', key: 'slice3DRes', label: 'Cut density in 3D',
@@ -588,7 +591,9 @@
   }
 
   function buildSlices() {
-    state.planes = hasTriple() ? CC.slice.build(model, state.anchors, THUMB) : [];
+    state.planes = hasTriple()
+      ? CC.slice.build(model, state.anchors, THUMB, state.sliceClip)
+      : [];
     if (state.planeIndex >= state.planes.length) state.planeIndex = 0;
   }
 
@@ -608,25 +613,46 @@
     var cv = document.getElementById('sliceView');
     var ctx = cv.getContext('2d');
     ctx.clearRect(0, 0, SLICE_SIZE, SLICE_SIZE);
-    ctx.putImageData(
-      new ImageData(CC.slice.raster(model, plane.frame, SLICE_SIZE), SLICE_SIZE, SLICE_SIZE), 0, 0);
+    ctx.putImageData(new ImageData(
+      CC.slice.raster(model, plane.frame, SLICE_SIZE, state.sliceClip),
+      SLICE_SIZE, SLICE_SIZE), 0, 0);
+
+    var R = CC.slice.RADIUS;
+    var toPixel = function (uv) {
+      return [((uv[0] / R) + 1) / 2 * (SLICE_SIZE - 1),
+              ((-uv[1] / R) + 1) / 2 * (SLICE_SIZE - 1)];
+    };
+
+    /* Stroked twice, dark then light, so the marks stay legible whatever colour
+     * they land on. */
+    var outline = function (alpha) {
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = 'rgba(0,0,0,' + alpha * 0.6 + ')';
+      ctx.stroke();
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(255,255,255,' + alpha + ')';
+      ctx.stroke();
+    };
+
+    var pix = plane.frame.points.map(function (p) {
+      return toPixel(CC.slice.uvOf(plane.frame, p));
+    });
+
+    /* The border the three points make, drawn whether or not it is clipping, so
+     * you can see what turning the option on would cut away. */
+    ctx.beginPath();
+    ctx.moveTo(pix[0][0], pix[0][1]);
+    ctx.lineTo(pix[1][0], pix[1][1]);
+    ctx.lineTo(pix[2][0], pix[2][1]);
+    ctx.closePath();
+    outline(state.sliceClip ? 0.5 : 0.8);
 
     /* Ring the three colours that chose this cut, so you can see where they sit
      * on a face that is mostly other colours. */
-    var R = CC.slice.RADIUS;
-    plane.frame.points.forEach(function (p) {
-      var uv = CC.slice.uvOf(plane.frame, p);
-      var px = ((uv[0] / R) + 1) / 2 * (SLICE_SIZE - 1);
-      var py = ((-uv[1] / R) + 1) / 2 * (SLICE_SIZE - 1);
-
+    pix.forEach(function (p) {
       ctx.beginPath();
-      ctx.arc(px, py, 5, 0, Math.PI * 2);
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = 'rgba(0,0,0,.65)';
-      ctx.stroke();
-      ctx.lineWidth = 1;
-      ctx.strokeStyle = 'rgba(255,255,255,.9)';
-      ctx.stroke();
+      ctx.arc(p[0], p[1], 5, 0, Math.PI * 2);
+      outline(0.9);
     });
 
     host.querySelector('.caption').textContent =

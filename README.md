@@ -103,8 +103,13 @@ just a blend of the three you picked. Those three only choose the angle.
 
 The face is drawn flat beside the 3D view, transparent wherever the plane has
 passed outside the gamut, which is what gives each cut its silhouette. The three
-colors that chose the plane are ringed on it. Turn on **Show the cut in 3D** to
-see the same face embedded in the solid it came from.
+colors are ringed on it and the triangle they bound is outlined. Turn on **Show
+the cut in 3D** to see the same face embedded in the solid it came from.
+
+**Hide color outside the border** clips the face to that triangle, so the three
+points bound the slice as well as orienting it. The border is drawn either way,
+so you can see what turning it on would cut away before you do. Clipping applies
+to the thumbnails and the 3D cut too, not just the flat view.
 
 With four or more points, every combination of three becomes its own plane. Five
 points give ten cuts, and the thumbnail grid lets you flip between them — each is
