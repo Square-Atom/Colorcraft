@@ -35,7 +35,9 @@
     planes: [],
     planeIndex: 0,
     sliceIn3D: true,
-    sliceClip: false,
+    /* Inverted for the UI: the cut is bounded by its border unless asked
+     * otherwise. sliceClip is derived from this at rebuild. */
+    showOutside: false,
     soloPlane: false,
     slice3DRes: 58,
 
@@ -199,11 +201,12 @@
       when: function () { return !hasPair(); },
       note: function () { return 'Add at least two points.'; } },
 
-    { sec: 'planes', type: 'planes' },
-    { sec: 'planes', type: 'check', key: 'sliceClip',
-      label: 'Hide color outside the border', rebuild: true, when: hasPlane },
-    { sec: 'planes', type: 'check', key: 'sliceIn3D', label: 'Show the cut in 3D',
+    { sec: 'top', type: 'check', key: 'sliceIn3D', label: 'Show the cut in 3D',
       rebuild: true, when: hasPlane },
+
+    { sec: 'planes', type: 'planes' },
+    { sec: 'planes', type: 'check', key: 'showOutside',
+      label: 'Show color outside the border', rebuild: true, when: hasPlane },
     { sec: 'planes', type: 'check', key: 'soloPlane', label: 'Hide color outside the plane',
       when: function () { return hasPlane() && state.sliceIn3D; } },
     { sec: 'planes', type: 'range', key: 'slice3DRes', label: 'Cut density in 3D',
@@ -759,6 +762,7 @@
     /* Resolved once here so the cloud, ramp and slice builders all agree on
      * what "auto" meant for the current number of points. */
     state.rampKind = rampKind();
+    state.sliceClip = !state.showOutside;
     /* Planes first: the cloud builder scatters the selected cut into 3D. */
     buildSlices();
     cloud = CC.cloud.build(model, state);

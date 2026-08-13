@@ -119,18 +119,18 @@ Three points define a plane, and that plane cuts the solid open. The **cut face*
 panel shows what the cut exposes — *every* color the plane passes through, not
 just a blend of the three you picked. Those three only choose the angle.
 
-The face is drawn flat at the foot of the palette panel, transparent wherever
-the plane has passed outside the gamut, which is what gives each cut its
-silhouette. The three
-colors are ringed on it and the triangle they bound is outlined. Turn on **Show
-the cut in 3D** to see the same face embedded in the solid it came from.
+By default the face is bounded by the triangle its three points make — they set
+the border as well as the angle. It is drawn flat at the foot of the palette
+panel, with the three colors ringed and the border outlined. **Show the cut in
+3D**, the toggle at the top of the palette, puts the same face back inside the
+solid it came from.
 
-Two options narrow what you see, and they stack:
-
-**Hide color outside the border** clips the face to that triangle, so the three
-points bound the slice as well as orienting it. The border is drawn either way,
-so you can see what turning it on would cut away before you do. Clipping applies
-to the thumbnails and the 3D cut too, not just the flat view.
+**Show color outside the border** lets the cut run past the triangle to the edge
+of the gamut, so you get the whole cross-section rather than only the part the
+points bound. The border stays outlined either way, so it is clear what is being
+added. It applies to the thumbnails and the 3D cut too, not just the flat view.
+Out there the face is transparent wherever the plane has left the gamut, which is
+what gives each cut its silhouette.
 
 **Hide color outside the plane** drops the solid entirely, leaving the cut alone
 in space. The axis and equator stay, so it keeps its bearings — rotate to see the

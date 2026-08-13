@@ -435,6 +435,21 @@ body.right-hidden #toggleRight { right: 12px; }
 
 .planebtn.on .plabel { color: var(--accent); }
 
+/* Standing toggle above the palette's sections, for something reached often
+ * enough that it should not be buried among the plane options. */
+#sec-top:not(:empty) { margin-bottom: 18px; }
+
+#sec-top .row { margin-bottom: 0; }
+
+#sec-top .check {
+  padding: 8px 10px;
+  background: #1c1d24;
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius);
+}
+
+#sec-top .check:hover { border-color: var(--accent); }
+
 /* Cut face -------------------------------------------------------------- */
 
 #slicePanel.hidden { display: none; }
