@@ -33,19 +33,29 @@
 
   var GAMUT_TOL = 1e-4;
 
-  /* Bisection against the gamut boundary. The sRGB solid is star-shaped about
-   * the neutral axis in both Oklab and CIELAB, so a plain binary search on C is
-   * safe: in-gamut is a single contiguous interval [0, maxC]. */
-  function bisectMaxC(model, L, h) {
-    if (color.inUnitRange(model.toRGB(L, 1, h, scratch), GAMUT_TOL)) return 1;
+  /* Bisection against a gamut boundary. Any RGB gamut is star-shaped about the
+   * neutral axis in both Oklab and CIELAB, so a plain binary search on C is
+   * safe: in-gamut is a single contiguous interval [0, maxC].
+   *
+   * `hi` is the search ceiling in normalised chroma. It is 1 for sRGB by
+   * construction, but wider gamuts reach past that -- Rec. 2020 green sits well
+   * outside sRGB's most saturated color -- so callers can raise it. */
+  function bisect(inside, hi) {
+    if (inside(hi)) return hi;
 
-    var lo = 0, hi = 1, mid;
+    var lo = 0, mid;
     for (var i = 0; i < 22; i++) {
       mid = (lo + hi) * 0.5;
-      if (color.inUnitRange(model.toRGB(L, mid, h, scratch), GAMUT_TOL)) lo = mid;
+      if (inside(mid)) lo = mid;
       else hi = mid;
     }
     return lo;
+  }
+
+  function bisectMaxC(model, L, h) {
+    return bisect(function (C) {
+      return color.inUnitRange(model.toRGB(L, C, h, scratch), GAMUT_TOL);
+    }, 1);
   }
 
   /* ---------------------------------------------------------------- Oklch */
@@ -57,6 +67,15 @@
     lLabel: 'L',
     cLabel: 'C',
     chromaMax: OKLAB_CMAX,
+    perceptual: true,
+
+    /* Routed through linear sRGB, which is just a coordinate system here -- the
+     * values are free to fall outside 0..1 on the way to XYZ. */
+    toXYZ: function (L, C, h, out) {
+      var c = C * OKLAB_CMAX;
+      color.oklabToLinear(L, c * Math.cos(h), c * Math.sin(h), out);
+      return color.linearToXyz(out[0], out[1], out[2], out);
+    },
 
     toRGB: function (L, C, h, out) {
       var c = C * OKLAB_CMAX;
@@ -89,6 +108,12 @@
     lLabel: 'L*',
     cLabel: 'C*',
     chromaMax: LAB_CMAX,
+    perceptual: true,
+
+    toXYZ: function (L, C, h, out) {
+      var c = C * LAB_CMAX;
+      return color.labToXyz(L * 100, c * Math.cos(h), c * Math.sin(h), out);
+    },
 
     toRGB: function (L, C, h, out) {
       var c = C * LAB_CMAX;
@@ -172,5 +197,9 @@
   var byId = {};
   for (var i = 0; i < list.length; i++) byId[list[i].id] = list[i];
 
-  CC.models = { list: list, get: function (id) { return byId[id] || oklch; } };
+  CC.models = {
+    list: list,
+    get: function (id) { return byId[id] || oklch; },
+    bisect: bisect
+  };
 })(this);

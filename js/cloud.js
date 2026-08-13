@@ -3,10 +3,11 @@
  * Produces flat typed arrays rather than objects: the renderer walks these every
  * frame, and an array of a few thousand small objects would thrash the GC.
  *
- *   pos  [x, y, z]           unit geometry, before the scale sliders
- *   rgb  [r, g, b]           0..255, ready to serialise
- *   meta [L, C, h]           kept so the filter sliders can work without rebuilding
- *   css  "r,g,b"             prebuilt string fragment; avoids per-frame formatting
+ *   pos   [x, y, z]          unit geometry, before the scale sliders
+ *   rgb   [r, g, b]          0..255, ready to serialise
+ *   meta  [L, C, h]          kept so the filter sliders can work without rebuilding
+ *   css   "r,g,b"            prebuilt string fragment; avoids per-frame formatting
+ *   outer 0 or 1             1 marks the greyed envelope rather than the solid
  */
 (function (global) {
   'use strict';
@@ -19,9 +20,15 @@
     this.rgb = [];
     this.meta = [];
     this.css = [];
+    this.outer = [];
+    this.hasOuter = false;
+    /* Tracked so the camera can frame whatever was built. A wide-gamut envelope
+     * reaches well past the sRGB solid, and a fixed distance would clip it. */
+    this.maxC = 0;
+    this.maxY = 0;
   }
 
-  Builder.prototype.push = function (L, C, h, rgb) {
+  Builder.prototype.push = function (L, C, h, rgb, isOuter) {
     var r = Math.round(CC.color.clamp01(rgb[0]) * 255);
     var g = Math.round(CC.color.clamp01(rgb[1]) * 255);
     var b = Math.round(CC.color.clamp01(rgb[2]) * 255);
@@ -30,6 +37,12 @@
     this.rgb.push(r, g, b);
     this.meta.push(L, C, h);
     this.css.push(r + ',' + g + ',' + b);
+    this.outer.push(isOuter ? 1 : 0);
+    if (isOuter) this.hasOuter = true;
+
+    if (C > this.maxC) this.maxC = C;
+    var y = Math.abs(L - 0.5);
+    if (y > this.maxY) this.maxY = y;
   };
 
   Builder.prototype.finish = function () {
@@ -38,7 +51,11 @@
       pos: new Float32Array(this.pos),
       rgb: new Uint8Array(this.rgb),
       meta: new Float32Array(this.meta),
-      css: this.css
+      css: this.css,
+      outer: new Uint8Array(this.outer),
+      hasOuter: this.hasOuter,
+      maxC: this.maxC || 1,
+      maxY: this.maxY || 0.5
     };
   };
 
@@ -50,7 +67,10 @@
    * saturated color -- high for yellow, low for blue.
    */
   function buildLattice(model, o) {
-    var b = new Builder();
+    return latticeInto(new Builder(), model, o).finish();
+  }
+
+  function latticeInto(b, model, o) {
     var rgb = [0, 0, 0];
     var Ln = o.lightSteps, Hn = o.hueSteps, Cn = o.chromaSteps;
 
@@ -96,7 +116,7 @@
         }
       }
     }
-    return b.finish();
+    return b;
   }
 
   /* Sample the sRGB cube uniformly and let each color fall where the model puts
@@ -122,9 +142,58 @@
     return b.finish();
   }
 
+  /* sRGB in full color, wrapped in a greyed shell marking a wider gamut.
+   *
+   * The envelope is drawn neutral rather than colored on purpose: those colors
+   * are by definition ones sRGB cannot show, so painting them in sRGB would be a
+   * lie. Grey says "there is color out here that your screen cannot reach",
+   * which is the honest claim.
+   */
+  function buildNested(model, o) {
+    var b = latticeInto(new Builder(), model, o);
+    if (model.perceptual) addEnvelope(b, model, o);
+    return b.finish();
+  }
+
+  function addEnvelope(b, model, o) {
+    var rgb = [0, 0, 0];
+    var xyz = [0, 0, 0];
+    var Ln = o.lightSteps, Hn = o.hueSteps;
+    var cylinder = o.envelope === 'cylinder';
+    var gamut = cylinder ? null : CC.gamuts.get(o.envelope);
+
+    for (var li = 0; li < Ln; li++) {
+      var L = Ln === 1 ? 0.5 : li / (Ln - 1);
+
+      for (var hj = 0; hj < Hn; hj++) {
+        var h = TAU * hj / Hn;
+        var cmax;
+
+        if (cylinder) {
+          /* The raw coordinate range, not a real color space: chroma simply runs
+           * to its normalising maximum at every lightness. */
+          cmax = 1;
+        } else {
+          /* Wider gamuts reach past sRGB's most saturated color, so the search
+           * ceiling has to sit above the 1.0 that normalises sRGB. */
+          cmax = CC.models.bisect(function (C) {
+            model.toXYZ(L, C, h, xyz);
+            return CC.gamuts.containsXyz(gamut, xyz[0], xyz[1], xyz[2], 1e-4);
+          }, 2.5);
+        }
+
+        if (cmax < 1e-4) continue;
+        model.toRGB(L, cmax, h, rgb);
+        b.push(L, cmax, h, rgb, true);
+      }
+    }
+  }
+
   CC.cloud = {
     build: function (model, opts) {
-      return opts.sampling === 'cube' ? buildCube(model, opts) : buildLattice(model, opts);
+      if (opts.sampling === 'cube') return buildCube(model, opts);
+      if (opts.sampling === 'nest') return buildNested(model, opts);
+      return buildLattice(model, opts);
     }
   };
 })(this);

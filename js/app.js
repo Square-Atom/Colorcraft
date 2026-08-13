@@ -21,12 +21,14 @@
     surfaceOnly: false,
     showAxis: true,
     cubeSteps: 12,
+    envelope: 'p3',
+    outerOpacity: 0.32,
 
     /* how it looks */
     pointSize: 5,
     opacity: 1,
     depthCue: 0.35,
-    shape: 'square',
+    shape: 'round',
     radiusScale: 1.15,
     heightScale: 1.6,
 
@@ -45,7 +47,7 @@
     yaw: 0.7, pitch: 0.28, dist: 3.1, panX: 0, panY: 0, fov: 55
   };
 
-  var VIEW_DEFAULTS = { yaw: 0.7, pitch: 0.28, dist: 3.1, panX: 0, panY: 0 };
+  var VIEW_DEFAULTS = { yaw: 0.7, pitch: 0.28, panX: 0, panY: 0 };
 
   var canvas = document.getElementById('view');
   var renderer = new CC.Renderer(canvas);
@@ -53,7 +55,11 @@
   var cloud = null;
   var dirty = true;
 
-  function isLattice() { return state.sampling === 'lattice'; }
+  /* Nesting mode builds an sRGB lattice and adds a shell, so it shares every
+   * lattice control. */
+  function usesLattice() { return state.sampling !== 'cube'; }
+  function isNested() { return state.sampling === 'nest'; }
+  function nestReady() { return isNested() && model.perceptual; }
 
   /* ------------------------------------------------------------- controls */
 
@@ -64,23 +70,43 @@
     { sec: 'model', type: 'select', key: 'sampling', label: 'Sampling', rebuild: true,
       options: [
         { value: 'lattice', label: 'Hue / lightness lattice' },
-        { value: 'cube', label: 'sRGB cube (true distribution)' }
+        { value: 'cube', label: 'sRGB cube (true distribution)' },
+        { value: 'nest', label: 'sRGB inside a wider gamut' }
       ] },
+    { sec: 'model', type: 'select', key: 'envelope', label: 'Outer envelope', rebuild: true,
+      when: nestReady,
+      options: [{ value: 'cylinder', label: 'Full LCh cylinder' }].concat(
+        CC.gamuts.list.filter(function (g) { return g.id !== 'srgb'; })
+          .map(function (g) { return { value: g.id, label: g.name }; })) },
+    { sec: 'model', type: 'note', when: nestReady, note: function () {
+        if (state.envelope === 'cylinder')
+          return 'The raw coordinate cylinder — how little of it sRGB actually fills.';
+        return CC.gamuts.get(state.envelope).note;
+      } },
+    { sec: 'model', type: 'note',
+      when: function () { return isNested() && !model.perceptual; },
+      note: function () {
+        return 'Gamut nesting needs a perceptual model — HSV and HSL have no ' +
+               'fixed position in CIE space. Switch to Oklch or CIE LCh.';
+      } },
 
     { sec: 'density', type: 'range', key: 'hueSteps', label: 'Hue steps',
-      min: 6, max: 72, step: 1, rebuild: true, when: isLattice },
+      min: 6, max: 72, step: 1, rebuild: true, when: usesLattice },
     { sec: 'density', type: 'range', key: 'lightSteps', label: 'Lightness levels',
-      min: 3, max: 33, step: 1, rebuild: true, when: isLattice },
+      min: 3, max: 33, step: 1, rebuild: true, when: usesLattice },
     { sec: 'density', type: 'range', key: 'chromaSteps', label: 'Chroma rings',
-      min: 1, max: 12, step: 1, rebuild: true, when: isLattice },
+      min: 1, max: 12, step: 1, rebuild: true, when: usesLattice },
     { sec: 'density', type: 'check', key: 'chromaFill', label: 'Rings ride the gamut edge',
-      rebuild: true, when: isLattice },
+      rebuild: true, when: usesLattice },
     { sec: 'density', type: 'check', key: 'surfaceOnly', label: 'Outer shell only',
-      rebuild: true, when: isLattice },
+      rebuild: true, when: usesLattice },
     { sec: 'density', type: 'check', key: 'showAxis', label: 'Include neutral axis',
       rebuild: true },
     { sec: 'density', type: 'range', key: 'cubeSteps', label: 'Cube steps per channel',
-      min: 4, max: 24, step: 1, rebuild: true, when: function () { return !isLattice(); } },
+      min: 4, max: 24, step: 1, rebuild: true,
+      when: function () { return !usesLattice(); } },
+    { sec: 'density', type: 'range', key: 'outerOpacity', label: 'Envelope opacity',
+      min: 0.05, max: 1, step: 0.01, when: nestReady },
 
     { sec: 'appearance', type: 'range', key: 'pointSize', label: 'Point size',
       min: 1, max: 16, step: 0.5 },
@@ -89,7 +115,7 @@
     { sec: 'appearance', type: 'range', key: 'depthCue', label: 'Depth fade',
       min: 0, max: 1, step: 0.01 },
     { sec: 'appearance', type: 'select', key: 'shape', label: 'Point shape',
-      options: [{ value: 'square', label: 'Square (faster)' }, { value: 'round', label: 'Round' }] },
+      options: [{ value: 'round', label: 'Round' }, { value: 'square', label: 'Square (faster)' }] },
     { sec: 'appearance', type: 'range', key: 'radiusScale', label: 'Radial spread',
       min: 0.3, max: 2.5, step: 0.01 },
     { sec: 'appearance', type: 'range', key: 'heightScale', label: 'Vertical spread',
@@ -131,7 +157,7 @@
     var entry = { def: def, row: row, sync: null };
 
     if (def.type === 'note') {
-      row.className = 'note';
+      row.className = 'row note';
       entry.sync = function () { row.textContent = def.note(); };
     } else if (def.type === 'button') {
       var btn = el('button', 'btn', def.label);
@@ -231,6 +257,9 @@
     state[key] = value;
     if (key === 'modelId') model = CC.models.get(value);
     if (rebuild) rebuild_();
+    /* Switching sampling or envelope can change the cloud's extent several-fold,
+     * so reframe. Other rebuilds leave the camera where the user put it. */
+    if (key === 'sampling' || key === 'envelope') fitView();
     syncPanel();
     dirty = true;
   }
@@ -246,9 +275,19 @@
     dirty = true;
   }
 
+  /* Pull back far enough to frame the whole cloud, whatever its extent. */
+  function fitView() {
+    var maxC = cloud ? cloud.maxC : 1;
+    var maxY = cloud ? cloud.maxY : 0.5;
+    var radius = Math.sqrt(Math.pow(maxC * state.radiusScale, 2) +
+                           Math.pow(maxY * state.heightScale, 2));
+    state.dist = Math.max(0.8, radius / Math.sin(state.fov * Math.PI / 360) * 1.15);
+    dirty = true;
+  }
+
   function resetView() {
     for (var k in VIEW_DEFAULTS) state[k] = VIEW_DEFAULTS[k];
-    dirty = true;
+    fitView();
   }
 
   /* ------------------------------------------------------------- camera */
@@ -407,5 +446,6 @@
   buildPanel();
   syncPanel();
   rebuild_();
+  fitView();
   frame();
 })(this);

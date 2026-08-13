@@ -52,9 +52,28 @@ so the silhouette traces the true gamut. When off, rings are spaced at uniform
 absolute chroma and simply stop where they run out of gamut — a ragged edge, but
 an honest sense of how much chroma each hue really has.
 
-**Sampling** switches between the hue/lightness lattice and a uniform walk of the
-sRGB cube. The cube shows the true distribution of displayable colors; the
-clumping is real, not an artifact.
+## Sampling
+
+Three ways to populate the same space.
+
+**Hue / lightness lattice** walks the model's own coordinates and asks what color
+sits at each position. Even rings and spokes; a diagram of the model.
+
+**sRGB cube** walks the display's colors instead and asks where each one lands.
+Every point is displayable by construction, and the clumping is real information —
+it shows how unevenly RGB is spread through perceptual space.
+
+**sRGB inside a wider gamut** draws sRGB in full color wrapped in a greyed shell
+marking a larger space: Display P3, Adobe RGB (1998), Rec. 2020, or the raw LCh
+coordinate cylinder. Turn on *Outer shell only* and add a cutaway wedge to see
+how much room is left between them.
+
+The envelope is deliberately neutral rather than colored. Those are by definition
+colors sRGB cannot show, so painting them in sRGB would be a lie; grey says "there
+is color out here your screen cannot reach", which is the honest claim.
+
+This mode needs a perceptual model — HSV and HSL have no fixed position in CIE
+space, so there is nothing to nest them inside.
 
 ## Controls
 
@@ -74,11 +93,13 @@ clumping is real, not an artifact.
 ```
 index.html
 css/style.css
-js/color.js       sRGB, Oklab, CIELAB, HSV, HSL conversions
+js/color.js       sRGB, Oklab, CIELAB, XYZ, HSV, HSL conversions
+js/gamuts.js      RGB working spaces, matrices derived from chromaticities
 js/models.js      the four solids behind one generic interface
 js/cloud.js       point cloud construction
 js/renderer.js    orbit camera, painter's algorithm, picking
 js/app.js         controls, input, frame loop
+serve.py          optional no-cache dev server
 ```
 
 `js/color.js` is deliberately written as pure, allocation-free functions with no
@@ -96,6 +117,16 @@ a counting sort into depth buckets, so it stays linear as density climbs. Points
 carry prebuilt color strings so the common full-opacity path does no per-frame
 string formatting.
 
-The gamut boundary is found by bisection on chroma. The sRGB solid is star-shaped
+The gamut boundary is found by bisection on chroma. Any RGB gamut is star-shaped
 about the neutral axis in both Oklab and CIELAB, so in-gamut is a single
 contiguous interval and a plain binary search is safe.
+
+Gamuts are defined by their published CIE xy chromaticities, and the XYZ matrices
+are derived from those at load time rather than transcribed. Deriving beats
+copying: the matrices are long strings of digits that are easy to get subtly
+wrong, and adding a gamut becomes eight numbers you can check against a spec. The
+derived sRGB matrix agrees with the published one to six decimal places.
+
+Only primaries matter for this, incidentally — a gamut's volume is fixed by its
+primaries and white point, and the transfer curve only affects encoding within it.
+Every gamut test happens in linear light, so no transfer function is involved.

@@ -60,30 +60,50 @@
     return t3 > EPS ? t3 : (116 * t - 16) / KAPPA;
   }
 
-  function linearToLab(r, g, b, out) {
-    var X = 0.4123907993 * r + 0.3575843394 * g + 0.1804807884 * b;
-    var Y = 0.2126390059 * r + 0.7151686788 * g + 0.0721923154 * b;
-    var Z = 0.0193308187 * r + 0.1191947798 * g + 0.9505321522 * b;
+  /* XYZ is the hub: it is the only space every gamut can be compared in, so the
+   * Lab and Oklab paths both route through it rather than straight to sRGB. */
+  function linearToXyz(r, g, b, out) {
+    out[0] = 0.4123907993 * r + 0.3575843394 * g + 0.1804807884 * b;
+    out[1] = 0.2126390059 * r + 0.7151686788 * g + 0.0721923154 * b;
+    out[2] = 0.0193308187 * r + 0.1191947798 * g + 0.9505321522 * b;
+    return out;
+  }
 
+  function xyzToLinear(X, Y, Z, out) {
+    out[0] = +3.2409699419 * X - 1.5373831776 * Y - 0.4986107603 * Z;
+    out[1] = -0.9692436363 * X + 1.8759675015 * Y + 0.0415550574 * Z;
+    out[2] = +0.0556300797 * X - 0.2039769589 * Y + 1.0569715142 * Z;
+    return out;
+  }
+
+  function xyzToLab(X, Y, Z, out) {
     var fx = labF(X / Xn), fy = labF(Y / Yn), fz = labF(Z / Zn);
-
     out[0] = 116 * fy - 16;
     out[1] = 500 * (fx - fy);
     out[2] = 200 * (fy - fz);
     return out;
   }
 
-  function labToLinear(L, a, b, out) {
+  function labToXyz(L, a, b, out) {
     var fy = (L + 16) / 116;
     var fx = fy + a / 500;
     var fz = fy - b / 200;
-
-    var X = Xn * labFInv(fx), Y = Yn * labFInv(fy), Z = Zn * labFInv(fz);
-
-    out[0] = +3.2409699419 * X - 1.5373831776 * Y - 0.4986107603 * Z;
-    out[1] = -0.9692436363 * X + 1.8759675015 * Y + 0.0415550574 * Z;
-    out[2] = +0.0556300797 * X - 0.2039769589 * Y + 1.0569715142 * Z;
+    out[0] = Xn * labFInv(fx);
+    out[1] = Yn * labFInv(fy);
+    out[2] = Zn * labFInv(fz);
     return out;
+  }
+
+  var xyzScratch = [0, 0, 0];
+
+  function linearToLab(r, g, b, out) {
+    linearToXyz(r, g, b, xyzScratch);
+    return xyzToLab(xyzScratch[0], xyzScratch[1], xyzScratch[2], out);
+  }
+
+  function labToLinear(L, a, b, out) {
+    labToXyz(L, a, b, xyzScratch);
+    return xyzToLinear(xyzScratch[0], xyzScratch[1], xyzScratch[2], out);
   }
 
   /* ------------------------------------------------------------- HSV / HSL
@@ -191,6 +211,10 @@
     oklabToLinear: oklabToLinear,
     linearToLab: linearToLab,
     labToLinear: labToLinear,
+    linearToXyz: linearToXyz,
+    xyzToLinear: xyzToLinear,
+    labToXyz: labToXyz,
+    xyzToLab: xyzToLab,
     hsvToRgb: hsvToRgb,
     rgbToHsv: rgbToHsv,
     hslToRgb: hslToRgb,

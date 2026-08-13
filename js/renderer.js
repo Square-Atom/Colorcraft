@@ -84,7 +84,8 @@
     ctx.fillStyle = s.background;
     ctx.fillRect(0, 0, W, H);
 
-    if (!cloud || !cloud.count) { this.visible = 0; return; }
+    if (!cloud || !cloud.count) { this.visible = 0; this.cloud = null; return; }
+    this.cloud = cloud;
     this.ensure(cloud.count);
 
     var cy = Math.cos(s.yaw), sy = Math.sin(s.yaw);
@@ -164,22 +165,32 @@
     var ctx = this.ctx;
     var order = this.order, sxA = this.sx, syA = this.sy, ssA = this.ss, sdA = this.sd;
     var srcA = this.src, rgb = cloud.rgb, css = cloud.css;
+    var outer = cloud.outer, meta = cloud.meta;
     var round = s.shape === 'round';
     var cue = s.depthCue, alpha = s.opacity;
 
     /* Fast path: no per-point color maths, so the prebuilt strings can be used
-     * directly. This is the common case and roughly doubles throughput. */
-    var plain = cue <= 0.001 && alpha >= 0.999;
+     * directly. This is the common case and roughly doubles throughput. The
+     * envelope always needs alpha, so its presence rules the fast path out. */
+    var plain = cue <= 0.001 && alpha >= 0.999 && !cloud.hasOuter;
 
     var bgR = bg[0] * 255, bgG = bg[1] * 255, bgB = bg[2] * 255;
     var aStr = alpha.toFixed(3);
+    var outerAlpha = s.outerOpacity == null ? 0.32 : s.outerOpacity;
 
     for (var k = 0; k < vis; k++) {
       var i = order[k];
       var src = srcA[i];
       var sz = ssA[i];
 
-      if (plain) {
+      if (outer && outer[src]) {
+        /* Neutral, but tracking the point's own lightness so the envelope still
+         * reads as a shape rather than a flat silhouette. Clamped away from the
+         * extremes so it stays visible on both black and white backgrounds. */
+        var v = 0.16 + 0.72 * meta[src * 3];
+        var g8 = (v * 255) | 0;
+        ctx.fillStyle = 'rgba(' + g8 + ',' + g8 + ',' + g8 + ',' + outerAlpha + ')';
+      } else if (plain) {
         ctx.fillStyle = 'rgb(' + css[src] + ')';
       } else {
         var t = cue * ((sdA[i] - dmin) / span);
@@ -254,8 +265,12 @@
   Renderer.prototype.pick = function (mx, my, radius) {
     var best = -1, bestD = radius * radius, bestDepth = Infinity;
     var sxA = this.sx, syA = this.sy, sdA = this.sd, srcA = this.src;
+    /* Envelope points are skipped: they sit outside sRGB, so there is no honest
+     * hex to report for them. */
+    var outer = this.cloud && this.cloud.outer;
 
     for (var i = 0; i < this.visible; i++) {
+      if (outer && outer[srcA[i]]) continue;
       var dx = sxA[i] - mx, dy = syA[i] - my;
       var d2 = dx * dx + dy * dy;
       if (d2 <= bestD && sdA[i] < bestDepth) {
