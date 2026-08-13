@@ -110,6 +110,11 @@
    * h in turns (0..1) for these two helpers, converted at the model layer.
    */
   function hsvToRgb(h, s, v, out) {
+    /* Wrapped rather than assumed in range. Hue arriving from atan2 is negative
+     * below the axis, and JavaScript's % keeps the sign, so a negative sector
+     * index would match no case and silently fall through to the wrong one. */
+    h -= Math.floor(h);
+
     var i = Math.floor(h * 6);
     var f = h * 6 - i;
     var p = v * (1 - s);
@@ -158,6 +163,8 @@
   }
 
   function hslToRgb(h, s, l, out) {
+    h -= Math.floor(h);   /* same wrap as hsvToRgb, for the same reason */
+
     var c = (1 - Math.abs(2 * l - 1)) * s;
     var hp = h * 6;
     var x = c * (1 - Math.abs((hp % 2) - 1));

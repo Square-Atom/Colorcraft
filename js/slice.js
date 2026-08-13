@@ -98,7 +98,10 @@
     if (L < -1e-6 || L > 1 + 1e-6) return false;
 
     var C = Math.sqrt(p[0] * p[0] + p[2] * p[2]);
+    /* atan2 gives (-pi, pi]; models expect hue on [0, tau), which is also what
+     * the cloud's own points carry. */
     var h = Math.atan2(p[2], p[0]);
+    if (h < 0) h += Math.PI * 2;
 
     lch[0] = L; lch[1] = C; lch[2] = h;
     model.toRGB(L, C, h, rgb);
