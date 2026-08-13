@@ -24,6 +24,13 @@
     envelope: 'p3',
     outerOpacity: 0.32,
 
+    /* user colors and the ramp between them */
+    anchors: [],
+    rampSpace: 'oklab',
+    rampMode: 'auto',
+    rampSteps: 16,
+    rampRes: 10,
+
     /* how it looks */
     pointSize: 5,
     opacity: 1,
@@ -60,6 +67,13 @@
   function usesLattice() { return state.sampling !== 'cube'; }
   function isNested() { return state.sampling === 'nest'; }
   function nestReady() { return isNested() && model.perceptual; }
+
+  function hasPair() { return state.anchors.length >= 2; }
+  function hasRamp() { return hasPair() && state.rampMode !== 'none'; }
+  function isPatch() {
+    return state.anchors.length >= 3 &&
+           (state.rampMode === 'patch' || state.rampMode === 'auto');
+  }
 
   /* ------------------------------------------------------------- controls */
 
@@ -130,6 +144,26 @@
     { sec: 'slice', type: 'range', key: 'cutStartDeg', label: 'Cutaway position',
       min: 0, max: 359, step: 1, unit: '°' },
 
+    { sec: 'points', type: 'entry' },
+    { sec: 'points', type: 'anchors' },
+    { sec: 'points', type: 'select', key: 'rampMode', label: 'Between points', rebuild: true,
+      when: hasPair,
+      options: [
+        { value: 'auto', label: 'Auto — line, or fill from 3' },
+        { value: 'line', label: 'Line through points' },
+        { value: 'patch', label: 'Fill the shape' },
+        { value: 'none', label: 'Nothing — points only' }
+      ] },
+    { sec: 'points', type: 'select', key: 'rampSpace', label: 'Blend in', rebuild: true,
+      when: hasRamp,
+      options: CC.ramp.spaces.map(function (s) { return { value: s.id, label: s.name }; }) },
+    { sec: 'points', type: 'range', key: 'rampSteps', label: 'Steps per segment',
+      min: 2, max: 64, step: 1, rebuild: true,
+      when: function () { return hasRamp() && !isPatch(); } },
+    { sec: 'points', type: 'range', key: 'rampRes', label: 'Fill resolution',
+      min: 2, max: 26, step: 1, rebuild: true,
+      when: function () { return hasRamp() && isPatch(); } },
+
     { sec: 'view', type: 'color', key: 'background', label: 'Background' },
     { sec: 'view', type: 'presets', key: 'background',
       values: ['#000000', '#12131a', '#3a3a3e', '#808080', '#d8d8dc', '#ffffff'] },
@@ -159,6 +193,55 @@
     if (def.type === 'note') {
       row.className = 'row note';
       entry.sync = function () { row.textContent = def.note(); };
+    } else if (def.type === 'entry') {
+      row.className = 'row entry';
+      var field = document.createElement('input');
+      field.type = 'text';
+      field.spellcheck = false;
+      field.placeholder = '#ff8800 · 255 136 0 · hsv 30 100 100';
+      var addBtn = el('button', 'btn', 'Add');
+      var err = el('div', 'err');
+      row.appendChild(field);
+      row.appendChild(addBtn);
+      row.appendChild(err);
+
+      var submit = function () {
+        var rgb = CC.ramp.parseColor(field.value);
+        if (!rgb) {
+          err.textContent = 'Not a color I recognise — try a hex, RGB or HSV triple.';
+          return;
+        }
+        err.textContent = '';
+        field.value = '';
+        addAnchor(rgb);
+      };
+      addBtn.addEventListener('click', submit);
+      field.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); submit(); }
+      });
+    } else if (def.type === 'anchors') {
+      row.className = 'row anchors';
+      entry.sync = function () {
+        row.textContent = '';
+        state.anchors.forEach(function (a, idx) {
+          var hex = CC.color.toHex(a.rgb[0], a.rgb[1], a.rgb[2]).toUpperCase();
+          var item = el('div', 'anchor');
+          var chip = el('span', 'chip');
+          chip.style.background = hex;
+          var del = el('button', 'x', '×');
+          del.title = 'Remove';
+          del.addEventListener('click', function () { removeAnchor(idx); });
+          item.appendChild(chip);
+          item.appendChild(el('span', 'hex', hex));
+          item.appendChild(del);
+          row.appendChild(item);
+        });
+        if (state.anchors.length) {
+          var clear = el('button', 'btn', 'Clear all points');
+          clear.addEventListener('click', clearAnchors);
+          row.appendChild(clear);
+        }
+      };
     } else if (def.type === 'button') {
       var btn = el('button', 'btn', def.label);
       btn.addEventListener('click', def.action);
@@ -264,6 +347,29 @@
     dirty = true;
   }
 
+  /* ------------------------------------------------------------- anchors */
+
+  function anchorsChanged() {
+    rebuild_();
+    syncPanel();
+    dirty = true;
+  }
+
+  function addAnchor(rgb) {
+    state.anchors = state.anchors.concat([{ rgb: rgb }]);
+    anchorsChanged();
+  }
+
+  function removeAnchor(idx) {
+    state.anchors = state.anchors.filter(function (_, i) { return i !== idx; });
+    anchorsChanged();
+  }
+
+  function clearAnchors() {
+    state.anchors = [];
+    anchorsChanged();
+  }
+
   /* --------------------------------------------------------------- build */
 
   function rebuild_() {
@@ -272,7 +378,48 @@
     var ms = performance.now() - t0;
     document.getElementById('count').textContent =
       cloud.count.toLocaleString() + ' points · ' + ms.toFixed(0) + ' ms';
+    updateStrip();
     dirty = true;
+  }
+
+  /* Generated ramps double as a palette, so lay them out flat as swatches. A
+   * filled patch runs to hundreds of colors, which is useless as a strip, so
+   * subsample for display while copy still yields the full set. */
+  var STRIP_MAX = 64;
+
+  function updateStrip() {
+    var host = document.getElementById('ramp');
+    var colors = (cloud && cloud.rampColors) || [];
+
+    if (!colors.length) { host.classList.add('hidden'); return; }
+    host.classList.remove('hidden');
+
+    var step = Math.max(1, Math.ceil(colors.length / STRIP_MAX));
+    var strip = host.querySelector('.strip');
+    strip.textContent = '';
+    var shown = 0;
+
+    for (var i = 0; i < colors.length; i += step) {
+      var c = colors[i];
+      var hex = CC.color.toHex(c.rgb[0], c.rgb[1], c.rgb[2]).toUpperCase();
+      var sw = el('button', c.clipped ? 'sw clipped' : 'sw');
+      sw.style.background = hex;
+      sw.title = hex + (c.clipped ? '  (clipped into sRGB)' : '');
+      sw.addEventListener('click', copyText.bind(null, hex));
+      strip.appendChild(sw);
+      shown++;
+    }
+
+    host.querySelector('.meta').textContent =
+      colors.length + ' colors' + (shown < colors.length ? ' · showing ' + shown : '');
+  }
+
+  function copyRamp() {
+    var colors = (cloud && cloud.rampColors) || [];
+    if (!colors.length) return;
+    copyText(colors.map(function (c) {
+      return CC.color.toHex(c.rgb[0], c.rgb[1], c.rgb[2]).toUpperCase();
+    }).join('\n'), colors.length + ' hex codes');
   }
 
   /* Pull back far enough to frame the whole cloud, whatever its extent. */
@@ -394,11 +541,11 @@
   var toast = document.getElementById('toast');
   var toastTimer = 0;
 
-  function copyText(text) {
+  function copyText(text, label) {
     /* execCommand fallback matters here: the clipboard API is unavailable on
      * file:// in several browsers, and this app is meant to run by double-click. */
     var done = function () {
-      toast.textContent = 'Copied ' + text;
+      toast.textContent = 'Copied ' + (label || text);
       toast.classList.remove('hidden');
       clearTimeout(toastTimer);
       toastTimer = setTimeout(function () { toast.classList.add('hidden'); }, 1400);
@@ -423,6 +570,8 @@
   document.getElementById('panelToggle').addEventListener('click', function () {
     document.body.classList.toggle('panel-hidden');
   });
+
+  document.getElementById('copyRamp').addEventListener('click', copyRamp);
 
   global.addEventListener('resize', function () { dirty = true; });
 

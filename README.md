@@ -75,6 +75,54 @@ is color out here your screen cannot reach", which is the honest claim.
 This mode needs a perceptual model — HSV and HSL have no fixed position in CIE
 space, so there is nothing to nest them inside.
 
+## Points and ramps
+
+Type a color into **Points & ramps** to drop it into the solid as a ringed
+marker. Hex, RGB and HSV all parse:
+
+```
+#ff8800   f80   255 136 0   rgb(255,136,0)   hsv 30 100 100   hsl(30,100,50)
+```
+
+Bare triples are read as 0–255 unless they look normalised (`0.5 0.2 0.9`).
+
+With two or more points, a ramp is generated between them. With three or more,
+**Auto** fills the shape they make instead: the polygon is fanned into triangles
+from its centroid and each is filled barycentrically. Three points give a flat
+triangle; more give a curved surface that still follows the outline the points
+make, and every corner keeps exactly the color you typed. Points are ordered by
+Oklab hue so the polygon never self-intersects.
+
+### Blend in
+
+This is the control worth playing with. A gradient has no single correct path —
+it depends entirely on which space you average in, and the difference is large.
+Blue `#0033ff` to yellow `#ffdd00`, same endpoints every time:
+
+| Blend space | Midpoint | |
+| --- | --- | --- |
+| Oklab — straight line | `#7ca1be` | a chord straight through the solid |
+| Oklch — polar arc | `#00c6a4` | bows outward through teal, keeping chroma up |
+| CIELAB — straight line | `#c684a3` | |
+| CIE LCh — polar arc | `#ff0066` | arcs the *other* way, through magenta |
+| Linear RGB | `#bca5bc` | physically correct light mixing |
+| sRGB — naive | `#808880` | the muddy grey midpoint everyone complains about |
+
+Watching those six paths take visibly different routes between the same two
+points is the clearest explanation of why gradient code cares about color space.
+
+Polar arcs keep chroma high through the middle, which is usually what you want
+from a ramp — but it also pushes the path outside sRGB. Those colors are clamped
+back in and marked with a dashed ring in the view and a dashed cap in the swatch
+strip, so you can see exactly where the ramp left the gamut.
+
+Generated ramps appear as a swatch strip along the bottom. Click any swatch to
+copy its hex, or **Copy all** for the whole list. Long fills are subsampled for
+display; copy still gives you everything.
+
+User points and their ramps ignore the slice and filter sliders — a color you
+typed should never quietly vanish behind a slider.
+
 ## Controls
 
 | Input | Action |
@@ -97,6 +145,7 @@ js/color.js       sRGB, Oklab, CIELAB, XYZ, HSV, HSL conversions
 js/gamuts.js      RGB working spaces, matrices derived from chromaticities
 js/models.js      the four solids behind one generic interface
 js/cloud.js       point cloud construction
+js/ramp.js        color parsing, blend spaces, gradients and patches
 js/renderer.js    orbit camera, painter's algorithm, picking
 js/app.js         controls, input, frame loop
 serve.py          optional no-cache dev server

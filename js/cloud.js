@@ -3,11 +3,12 @@
  * Produces flat typed arrays rather than objects: the renderer walks these every
  * frame, and an array of a few thousand small objects would thrash the GC.
  *
- *   pos   [x, y, z]          unit geometry, before the scale sliders
- *   rgb   [r, g, b]          0..255, ready to serialise
- *   meta  [L, C, h]          kept so the filter sliders can work without rebuilding
- *   css   "r,g,b"            prebuilt string fragment; avoids per-frame formatting
- *   outer 0 or 1             1 marks the greyed envelope rather than the solid
+ *   pos     [x, y, z]        unit geometry, before the scale sliders
+ *   rgb     [r, g, b]        0..255, ready to serialise
+ *   meta    [L, C, h]        kept so the filter sliders can work without rebuilding
+ *   css     "r,g,b"          prebuilt string fragment; avoids per-frame formatting
+ *   kind    0..3             see CC.KIND; decides how the renderer draws the point
+ *   clipped 0 or 1           1 means the true colour fell outside sRGB
  */
 (function (global) {
   'use strict';
@@ -15,12 +16,20 @@
   var CC = global.CC || (global.CC = {});
   var TAU = Math.PI * 2;
 
+  var KIND = CC.KIND = {
+    SOLID: 0,     /* the colour solid itself */
+    ENVELOPE: 1,  /* greyed hull of a wider gamut */
+    RAMP: 2,      /* generated gradient or patch */
+    ANCHOR: 3     /* a colour the user typed in */
+  };
+
   function Builder() {
     this.pos = [];
     this.rgb = [];
     this.meta = [];
     this.css = [];
-    this.outer = [];
+    this.kind = [];
+    this.clipped = [];
     this.hasOuter = false;
     /* Tracked so the camera can frame whatever was built. A wide-gamut envelope
      * reaches well past the sRGB solid, and a fixed distance would clip it. */
@@ -28,7 +37,7 @@
     this.maxY = 0;
   }
 
-  Builder.prototype.push = function (L, C, h, rgb, isOuter) {
+  Builder.prototype.push = function (L, C, h, rgb, kind, clipped) {
     var r = Math.round(CC.color.clamp01(rgb[0]) * 255);
     var g = Math.round(CC.color.clamp01(rgb[1]) * 255);
     var b = Math.round(CC.color.clamp01(rgb[2]) * 255);
@@ -37,8 +46,9 @@
     this.rgb.push(r, g, b);
     this.meta.push(L, C, h);
     this.css.push(r + ',' + g + ',' + b);
-    this.outer.push(isOuter ? 1 : 0);
-    if (isOuter) this.hasOuter = true;
+    this.kind.push(kind || 0);
+    this.clipped.push(clipped ? 1 : 0);
+    if (kind === KIND.ENVELOPE) this.hasOuter = true;
 
     if (C > this.maxC) this.maxC = C;
     var y = Math.abs(L - 0.5);
@@ -52,7 +62,8 @@
       rgb: new Uint8Array(this.rgb),
       meta: new Float32Array(this.meta),
       css: this.css,
-      outer: new Uint8Array(this.outer),
+      kind: new Uint8Array(this.kind),
+      clipped: new Uint8Array(this.clipped),
       hasOuter: this.hasOuter,
       maxC: this.maxC || 1,
       maxY: this.maxY || 0.5
@@ -66,10 +77,6 @@
    * while the silhouette still bulges wherever the display can actually produce
    * saturated color -- high for yellow, low for blue.
    */
-  function buildLattice(model, o) {
-    return latticeInto(new Builder(), model, o).finish();
-  }
-
   function latticeInto(b, model, o) {
     var rgb = [0, 0, 0];
     var Ln = o.lightSteps, Hn = o.hueSteps, Cn = o.chromaSteps;
@@ -122,8 +129,7 @@
   /* Sample the sRGB cube uniformly and let each color fall where the model puts
    * it. Shows the true distribution of displayable colors rather than an even
    * lattice -- the clumping is the point. */
-  function buildCube(model, o) {
-    var b = new Builder();
+  function cubeInto(b, model, o) {
     var out = [0, 0, 0];
     var rgb = [0, 0, 0];
     var n = o.cubeSteps;
@@ -135,26 +141,20 @@
           model.fromRGB(r, g, bl, out);
           if (!o.showAxis && out[1] < 1e-6) continue;
           rgb[0] = r; rgb[1] = g; rgb[2] = bl;
-          b.push(out[0], out[1], out[2], rgb);
+          b.push(out[0], out[1], out[2], rgb, KIND.SOLID, 0);
         }
       }
     }
-    return b.finish();
+    return b;
   }
 
-  /* sRGB in full color, wrapped in a greyed shell marking a wider gamut.
+  /* The greyed shell of a wider gamut, wrapped around the sRGB solid.
    *
-   * The envelope is drawn neutral rather than colored on purpose: those colors
-   * are by definition ones sRGB cannot show, so painting them in sRGB would be a
-   * lie. Grey says "there is color out here that your screen cannot reach",
-   * which is the honest claim.
+   * Drawn neutral rather than colored on purpose: those colors are by definition
+   * ones sRGB cannot show, so painting them in sRGB would be a lie. Grey says
+   * "there is color out here that your screen cannot reach", which is the honest
+   * claim.
    */
-  function buildNested(model, o) {
-    var b = latticeInto(new Builder(), model, o);
-    if (model.perceptual) addEnvelope(b, model, o);
-    return b.finish();
-  }
-
   function addEnvelope(b, model, o) {
     var rgb = [0, 0, 0];
     var xyz = [0, 0, 0];
@@ -184,16 +184,29 @@
 
         if (cmax < 1e-4) continue;
         model.toRGB(L, cmax, h, rgb);
-        b.push(L, cmax, h, rgb, true);
+        b.push(L, cmax, h, rgb, KIND.ENVELOPE, 0);
       }
     }
   }
 
+  CC.Builder = Builder;
+
   CC.cloud = {
     build: function (model, opts) {
-      if (opts.sampling === 'cube') return buildCube(model, opts);
-      if (opts.sampling === 'nest') return buildNested(model, opts);
-      return buildLattice(model, opts);
+      var b;
+      if (opts.sampling === 'cube') b = cubeInto(new Builder(), model, opts);
+      else {
+        b = latticeInto(new Builder(), model, opts);
+        if (opts.sampling === 'nest' && model.perceptual) addEnvelope(b, model, opts);
+      }
+
+      /* User points and their ramps join the same cloud so they depth-sort
+       * against the solid instead of floating in front of it. */
+      var generated = CC.ramp ? CC.ramp.appendTo(b, model, opts) : [];
+
+      var out = b.finish();
+      out.rampColors = generated;
+      return out;
     }
   };
 })(this);

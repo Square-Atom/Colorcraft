@@ -113,8 +113,9 @@
 
     if (s.guides) this.drawGuides(project, s, bg);
 
-    var pos = cloud.pos, meta = cloud.meta;
+    var pos = cloud.pos, meta = cloud.meta, kinds = cloud.kind;
     var n = cloud.count;
+    var KIND = CC.KIND;
     var sxA = this.sx, syA = this.sy, ssA = this.ss, sdA = this.sd, srcA = this.src;
     var tmp = [0, 0, 0, 0];
     var vis = 0;
@@ -124,19 +125,26 @@
     for (var i = 0; i < n; i++) {
       var m3 = i * 3;
       var L = meta[m3], C = meta[m3 + 1], hAng = meta[m3 + 2];
+      var kind = kinds[i];
 
-      if (L < s.lMin || L > s.lMax) continue;
-      if (C < s.cMin || C > s.cMax) continue;
-      if (inCut(hAng, s.cutStart, s.cutSize)) continue;
+      /* Points the user put there are never filtered away -- having a colour you
+       * typed silently vanish behind a slider would be baffling. */
+      if (kind < KIND.RAMP) {
+        if (L < s.lMin || L > s.lMax) continue;
+        if (C < s.cMin || C > s.cMax) continue;
+        if (inCut(hAng, s.cutStart, s.cutSize)) continue;
+      }
 
       if (!project(pos[m3] * rs, pos[m3 + 1] * hs, pos[m3 + 2] * rs, tmp)) continue;
 
       var px = tmp[0], py = tmp[1];
       if (px < -margin || px > W + margin || py < -margin || py > H + margin) continue;
 
+      var grow = kind === KIND.ANCHOR ? 2.4 : kind === KIND.RAMP ? 1.35 : 1;
+
       sxA[vis] = px;
       syA[vis] = py;
-      ssA[vis] = Math.max(0.75, s.pointSize * tmp[3] * 0.01);
+      ssA[vis] = Math.max(0.75, s.pointSize * tmp[3] * 0.01) * grow;
       sdA[vis] = tmp[2];
       srcA[vis] = i;
       if (tmp[2] < dmin) dmin = tmp[2];
@@ -165,7 +173,8 @@
     var ctx = this.ctx;
     var order = this.order, sxA = this.sx, syA = this.sy, ssA = this.ss, sdA = this.sd;
     var srcA = this.src, rgb = cloud.rgb, css = cloud.css;
-    var outer = cloud.outer, meta = cloud.meta;
+    var kinds = cloud.kind, clipped = cloud.clipped, meta = cloud.meta;
+    var KIND = CC.KIND;
     var round = s.shape === 'round';
     var cue = s.depthCue, alpha = s.opacity;
 
@@ -177,19 +186,28 @@
     var bgR = bg[0] * 255, bgG = bg[1] * 255, bgB = bg[2] * 255;
     var aStr = alpha.toFixed(3);
     var outerAlpha = s.outerOpacity == null ? 0.32 : s.outerOpacity;
+    var ink = CC.color.luminance(bg[0], bg[1], bg[2]) < 0.35 ? '255,255,255' : '0,0,0';
 
     for (var k = 0; k < vis; k++) {
       var i = order[k];
       var src = srcA[i];
       var sz = ssA[i];
+      var kind = kinds[src];
+      var ring = 0;
 
-      if (outer && outer[src]) {
+      if (kind === KIND.ENVELOPE) {
         /* Neutral, but tracking the point's own lightness so the envelope still
          * reads as a shape rather than a flat silhouette. Clamped away from the
          * extremes so it stays visible on both black and white backgrounds. */
         var v = 0.16 + 0.72 * meta[src * 3];
         var g8 = (v * 255) | 0;
         ctx.fillStyle = 'rgba(' + g8 + ',' + g8 + ',' + g8 + ',' + outerAlpha + ')';
+      } else if (kind >= KIND.RAMP) {
+        /* Always full strength: the cloud's opacity and depth fade are there to
+         * let you see through the solid, not to dim what you added. A ring marks
+         * anchors, and also ramp points whose true colour left sRGB. */
+        ctx.fillStyle = 'rgb(' + css[src] + ')';
+        ring = kind === KIND.ANCHOR ? 1 : (clipped[src] ? 2 : 0);
       } else if (plain) {
         ctx.fillStyle = 'rgb(' + css[src] + ')';
       } else {
@@ -201,12 +219,22 @@
         ctx.fillStyle = 'rgba(' + (r | 0) + ',' + (g | 0) + ',' + (b | 0) + ',' + aStr + ')';
       }
 
-      if (round) {
+      if (round || ring) {
         ctx.beginPath();
         ctx.arc(sxA[i], syA[i], sz * 0.5, 0, TAU);
         ctx.fill();
       } else {
         ctx.fillRect(sxA[i] - sz * 0.5, syA[i] - sz * 0.5, sz, sz);
+      }
+
+      if (ring) {
+        /* Solid outline for an anchor, dashed for a clipped ramp point, so the
+         * two stay distinguishable at a glance. */
+        ctx.strokeStyle = 'rgba(' + ink + ',' + (ring === 1 ? 0.95 : 0.8) + ')';
+        ctx.lineWidth = ring === 1 ? 1.6 : 1.1;
+        if (ring === 2) ctx.setLineDash([2, 2]);
+        ctx.stroke();
+        if (ring === 2) ctx.setLineDash([]);
       }
     }
   };
@@ -267,10 +295,10 @@
     var sxA = this.sx, syA = this.sy, sdA = this.sd, srcA = this.src;
     /* Envelope points are skipped: they sit outside sRGB, so there is no honest
      * hex to report for them. */
-    var outer = this.cloud && this.cloud.outer;
+    var kinds = this.cloud && this.cloud.kind;
 
     for (var i = 0; i < this.visible; i++) {
-      if (outer && outer[srcA[i]]) continue;
+      if (kinds && kinds[srcA[i]] === CC.KIND.ENVELOPE) continue;
       var dx = sxA[i] - mx, dy = syA[i] - my;
       var d2 = dx * dx + dy * dy;
       if (d2 <= bestD && sdA[i] < bestDepth) {

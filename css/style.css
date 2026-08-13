@@ -246,10 +246,134 @@ input[type=color] {
 
 body.panel-hidden #panelToggle { left: 12px; }
 
+/* Points and ramps ------------------------------------------------------ */
+
+.row.entry { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.row.entry input[type=text] {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 7px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--ink);
+  background: #202129;
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius);
+}
+
+.row.entry input[type=text]:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.row.entry .btn { width: auto; padding: 5px 12px; }
+
+.row.entry .err {
+  flex-basis: 100%;
+  color: #ff8a8a;
+  font-size: 11px;
+}
+
+.row.entry .err:empty { display: none; }
+
+.anchors { display: flex; flex-direction: column; gap: 4px; }
+
+.anchor {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 4px 3px 3px;
+  background: #1c1d24;
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius);
+}
+
+.anchor .chip {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, .18);
+}
+
+.anchor .hex {
+  flex: 1;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.anchor .x {
+  padding: 0 5px;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--ink-dim);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.anchor .x:hover { color: #ff8a8a; }
+
+/* Swatch strip ---------------------------------------------------------- */
+
+#ramp {
+  position: fixed;
+  left: 326px;
+  right: 14px;
+  bottom: 14px;
+  padding: 8px;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius);
+  transition: left .18s ease;
+}
+
+body.panel-hidden #ramp { left: 14px; }
+#ramp.hidden { display: none; }
+
+#ramp .strip {
+  display: flex;
+  gap: 1px;
+  height: 30px;
+  overflow: hidden;
+  border-radius: 3px;
+}
+
+#ramp .sw {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+}
+
+/* A dashed cap marks a colour whose true value fell outside sRGB. */
+#ramp .sw.clipped {
+  box-shadow: inset 0 3px 0 -1px rgba(255, 255, 255, .55),
+              inset 0 -3px 0 -1px rgba(0, 0, 0, .55);
+}
+
+#ramp .bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 7px;
+}
+
+#ramp .meta {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-dim);
+}
+
+#ramp .btn { width: auto; padding: 4px 12px; }
+
 #readout {
   position: fixed;
   right: 14px;
-  bottom: 14px;
+  top: 14px;
   display: flex;
   align-items: center;
   gap: 9px;
