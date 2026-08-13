@@ -172,6 +172,7 @@
     for (i = 0; i < vis; i++) order[starts[(sdA[i] - dmin) * scale | 0]++] = i;
 
     this.drawPoints(cloud, s, bg, vis, dmin, span);
+    this.drawMarkers(cloud, s, vis);
   };
 
   Renderer.prototype.drawPoints = function (cloud, s, bg, vis, dmin, span) {
@@ -207,13 +208,16 @@
         var v = 0.16 + 0.72 * meta[src * 3];
         var g8 = (v * 255) | 0;
         ctx.fillStyle = 'rgba(' + g8 + ',' + g8 + ',' + g8 + ',' + outerAlpha + ')';
+      } else if (kind === KIND.ANCHOR || kind === KIND.SELECTED) {
+        /* Skipped here and drawn afterwards, so a point is never buried by the
+         * solid it sits inside. */
+        continue;
       } else if (kind >= KIND.RAMP) {
         /* Always full strength: the cloud's opacity and depth fade are there to
-         * let you see through the solid, not to dim what you added. A ring marks
-         * anchors, and also ramp points whose true colour left sRGB. */
+         * let you see through the solid, not to dim what you added. The ring
+         * marks a ramp colour whose true value left sRGB. */
         ctx.fillStyle = 'rgb(' + css[src] + ')';
-        ring = (kind === KIND.ANCHOR || kind === KIND.SELECTED) ? 1
-             : (clipped[src] ? 2 : 0);
+        ring = clipped[src] ? 2 : 0;
       } else if (plain) {
         ctx.fillStyle = 'rgb(' + css[src] + ')';
       } else {
@@ -225,18 +229,7 @@
         ctx.fillStyle = 'rgba(' + (r | 0) + ',' + (g | 0) + ',' + (b | 0) + ',' + aStr + ')';
       }
 
-      if (kind === KIND.SELECTED) {
-        /* An inverted triangle, so the point being edited is identifiable by
-         * shape alone rather than by colour -- which is the one thing about it
-         * that keeps changing. */
-        var half = sz * 0.5;
-        ctx.beginPath();
-        ctx.moveTo(sxA[i] - half, syA[i] - sz * 0.4);
-        ctx.lineTo(sxA[i] + half, syA[i] - sz * 0.4);
-        ctx.lineTo(sxA[i], syA[i] + sz * 0.62);
-        ctx.closePath();
-        ctx.fill();
-      } else if (round || ring) {
+      if (round || ring) {
         ctx.beginPath();
         ctx.arc(sxA[i], syA[i], sz * 0.5, 0, TAU);
         ctx.fill();
@@ -244,17 +237,7 @@
         ctx.fillRect(sxA[i] - sz * 0.5, syA[i] - sz * 0.5, sz, sz);
       }
 
-      if (ring === 1) {
-        /* White, backed by a dark halo so it holds up over pale colours and on
-         * a white background. */
-        ctx.lineJoin = 'round';
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = 'rgba(0,0,0,.55)';
-        ctx.stroke();
-        ctx.lineWidth = 1.5;
-        ctx.strokeStyle = 'rgba(255,255,255,.95)';
-        ctx.stroke();
-      } else if (ring === 2) {
+      if (ring === 2) {
         /* Dashed: a ramp colour that had to be clamped back into sRGB. */
         ctx.strokeStyle = 'rgba(' + ink + ',.8)';
         ctx.lineWidth = 1.1;
@@ -262,6 +245,38 @@
         ctx.stroke();
         ctx.setLineDash([]);
       }
+    }
+  };
+
+  /* The user's points, drawn after everything else so they are never hidden
+   * inside the solid. Still walked in depth order, so where two overlap the
+   * nearer one lands on top.
+   *
+   * Selection is carried by border colour: white for the point being edited,
+   * black for the rest. */
+  Renderer.prototype.drawMarkers = function (cloud, s, vis) {
+    var ctx = this.ctx;
+    var order = this.order, sxA = this.sx, syA = this.sy, ssA = this.ss;
+    var srcA = this.src, kinds = cloud.kind, css = cloud.css;
+    var KIND = CC.KIND;
+
+    for (var k = 0; k < vis; k++) {
+      var i = order[k];
+      var src = srcA[i];
+      var kind = kinds[src];
+      if (kind !== KIND.ANCHOR && kind !== KIND.SELECTED) continue;
+
+      var sz = ssA[i];
+      ctx.beginPath();
+      ctx.arc(sxA[i], syA[i], sz * 0.5, 0, TAU);
+      ctx.fillStyle = 'rgb(' + css[src] + ')';
+      ctx.fill();
+
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = kind === KIND.SELECTED
+        ? 'rgba(255,255,255,.95)'
+        : 'rgba(0,0,0,.85)';
+      ctx.stroke();
     }
   };
 

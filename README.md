@@ -99,9 +99,11 @@ Bare triples are read as 0–255 unless they look normalised (`0.5 0.2 0.9`).
 A new point starts from the colour of the selected one, so building a set of
 related colours means adding and nudging rather than retyping.
 
-In the 3D view the **selected point is an inverted triangle** and the rest are
-**circles**, all with a white border. Shape rather than colour marks the
-selection, since colour is the one thing about it that keeps changing.
+In the 3D view every point is a circle, and the border says which is selected:
+**white for the selected point, black for the rest**. Points always draw over
+the solid rather than being sorted into it, so a colour deep in the interior is
+still visible — they are still depth ordered against each other, so where two
+overlap the nearer one lands on top.
 
 Points are numbered, and the plane list refers to them by those numbers.
 
