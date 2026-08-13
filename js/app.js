@@ -675,10 +675,14 @@
       'points ' + plane.combo.map(function (i) { return i + 1; }).join(' · ');
   }
 
-  /* The border and the three rings, over a cut face already drawn at (ox, oy).
-   * Shared by the on-screen window and the export, so a saved sheet carries the
-   * same marks as the app. Sizes scale with the face so it holds up when the
-   * export renders larger than the window. */
+  /* The border the three points make, over a cut face already drawn at
+   * (ox, oy). Shared by the on-screen window and the export, so a saved sheet
+   * carries the same border as the app, with the stroke scaled to the face so
+   * it holds up when the export renders larger than the window.
+   *
+   * Drawn whether or not the face is clipped: when it is, the line traces the
+   * edge of what is shown; when it is not, it marks what clipping would keep.
+   */
   function drawPlaneMarks(ctx, frame, ox, oy, size) {
     var R = CC.slice.RADIUS;
 
@@ -688,33 +692,15 @@
               oy + ((-uv[1] / R) + 1) / 2 * (size - 1)];
     });
 
-    /* Stroked twice, dark then light, so the marks stay legible whatever colour
-     * they land on. */
-    var outline = function (alpha) {
-      ctx.lineWidth = size / 102;
-      ctx.strokeStyle = 'rgba(0,0,0,' + alpha * 0.6 + ')';
-      ctx.stroke();
-      ctx.lineWidth = size / 256;
-      ctx.strokeStyle = 'rgba(255,255,255,' + alpha + ')';
-      ctx.stroke();
-    };
-
-    /* The border the three points make, drawn whether or not it is clipping, so
-     * you can see what turning the option on would cut away. */
     ctx.beginPath();
     ctx.moveTo(pix[0][0], pix[0][1]);
     ctx.lineTo(pix[1][0], pix[1][1]);
     ctx.lineTo(pix[2][0], pix[2][1]);
     ctx.closePath();
-    outline(state.sliceClip ? 0.5 : 0.8);
 
-    /* Ring the three colours that chose this cut, so you can see where they sit
-     * on a face that is mostly other colours. */
-    pix.forEach(function (p) {
-      ctx.beginPath();
-      ctx.arc(p[0], p[1], size / 51, 0, Math.PI * 2);
-      outline(0.9);
-    });
+    ctx.lineWidth = Math.max(1, size / 200);
+    ctx.strokeStyle = 'rgba(255,255,255,' + (state.sliceClip ? 0.7 : 0.9) + ')';
+    ctx.stroke();
   }
 
   /* Every plane on one sheet, each labelled with the points that cut it. One

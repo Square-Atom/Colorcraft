@@ -120,10 +120,10 @@ panel shows what the cut exposes — *every* color the plane passes through, not
 just a blend of the three you picked. Those three only choose the angle.
 
 By default the face is bounded by the triangle its three points make — they set
-the border as well as the angle. It shows in a small window pinned to the
-bottom-left of the palette, which stays put while the panel scrolls, with the
-three colors ringed and the border outlined. **Show the cut in 3D**, the toggle
-at the top of the palette, puts the same face back inside the solid it came from.
+the border as well as the angle. It shows in a small resizable window floating
+over the view, between the two panels, with the border drawn as a thin white
+outline. **Show the cut in 3D**, the toggle at the top of the palette, puts the
+same face back inside the solid it came from.
 
 **Show color outside the border** lets the cut run past the triangle to the edge
 of the gamut, so you get the whole cross-section rather than only the part the
@@ -141,9 +141,11 @@ With four or more points, every combination of three becomes its own plane. Five
 points give ten cuts, and the thumbnail grid lets you flip between them — each is
 a genuinely different cross-section. **Export planes as PNG** saves them all to
 one sheet, four to a row, each face at 320px and labelled with the points that
-cut it, carrying the same border and rings as the app draws. Combinations are capped at 40 so a long
-point list cannot detonate into hundreds of rasters. Three collinear points
-define no plane; that combination is marked rather than silently skipped.
+cut it, carrying the same border as the app draws.
+
+Combinations are capped at 40 so a long point list cannot detonate into hundreds
+of rasters. Three collinear points define no plane; that combination is marked
+rather than silently skipped.
 
 ### Ramps between points
 
