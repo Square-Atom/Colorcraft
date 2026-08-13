@@ -75,23 +75,49 @@ is color out here your screen cannot reach", which is the honest claim.
 This mode needs a perceptual model — HSV and HSL have no fixed position in CIE
 space, so there is nothing to nest them inside.
 
-## Points and ramps
+## Palette tab
 
-Type a color into **Points & ramps** to drop it into the solid as a ringed
-marker. Hex, RGB and HSV all parse:
+The panel has two tabs. **Display** holds everything about how the solid is
+drawn; **Palette** is where you add colors and build things from them.
+
+### Adding colors
+
+Dial one in with the picker — a live preview, an HSV/RGB toggle, and three
+sliders whose tracks show what moving that one slider would do. Or type it:
 
 ```
 #ff8800   f80   255 136 0   rgb(255,136,0)   hsv 30 100 100   hsl(30,100,50)
 ```
 
 Bare triples are read as 0–255 unless they look normalised (`0.5 0.2 0.9`).
+Enter adds immediately; the button adds whatever the sliders hold.
 
-With two or more points, a ramp is generated between them. With three or more,
-**Auto** fills the shape they make instead: the polygon is fanned into triangles
-from its centroid and each is filled barycentrically. Three points give a flat
-triangle; more give a curved surface that still follows the outline the points
-make, and every corner keeps exactly the color you typed. Points are ordered by
-Oklab hue so the polygon never self-intersects.
+Each color becomes a ringed marker in the solid, and the points are numbered so
+the plane list can refer to them.
+
+### Plane slices
+
+Three points define a plane, and that plane cuts the solid open. The **cut face**
+panel shows what the cut exposes — *every* color the plane passes through, not
+just a blend of the three you picked. Those three only choose the angle.
+
+The face is drawn flat beside the 3D view, transparent wherever the plane has
+passed outside the gamut, which is what gives each cut its silhouette. The three
+colors that chose the plane are ringed on it. Turn on **Show the cut in 3D** to
+see the same face embedded in the solid it came from.
+
+With four or more points, every combination of three becomes its own plane. Five
+points give ten cuts, and the thumbnail grid lets you flip between them — each is
+a genuinely different cross-section. Combinations are capped at 40 so a long
+point list cannot detonate into hundreds of rasters. Three collinear points
+define no plane; that combination is marked rather than silently skipped.
+
+### Ramps between points
+
+**Line** joins the points with a gradient. **Blend fill** takes the older
+approach for three or more: fan the polygon into triangles from its centroid and
+fill each barycentrically, so every corner keeps exactly the color you typed.
+Unlike a plane slice, a blend fill contains only colors mixed from your points.
 
 ### Blend in
 
@@ -145,7 +171,8 @@ js/color.js       sRGB, Oklab, CIELAB, XYZ, HSV, HSL conversions
 js/gamuts.js      RGB working spaces, matrices derived from chromaticities
 js/models.js      the four solids behind one generic interface
 js/cloud.js       point cloud construction
-js/ramp.js        color parsing, blend spaces, gradients and patches
+js/ramp.js        color parsing, blend spaces, gradients and blend fills
+js/slice.js       plane geometry and cross-section rasters
 js/renderer.js    orbit camera, painter's algorithm, picking
 js/app.js         controls, input, frame loop
 serve.py          optional no-cache dev server

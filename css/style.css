@@ -246,36 +246,242 @@ input[type=color] {
 
 body.panel-hidden #panelToggle { left: 12px; }
 
-/* Points and ramps ------------------------------------------------------ */
+/* Tabs ------------------------------------------------------------------ */
 
-.row.entry { display: flex; flex-wrap: wrap; gap: 6px; }
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  padding: 3px;
+  background: #1c1d24;
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius);
+}
 
-.row.entry input[type=text] {
+.tab {
+  flex: 1;
+  padding: 5px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--ink-dim);
+  background: none;
+  border: 0;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.tab:hover { color: var(--ink); }
+
+.tab.on {
+  color: #fff;
+  background: var(--accent);
+}
+
+.tabpanel.hidden { display: none; }
+
+/* Colour picker --------------------------------------------------------- */
+
+.picker .pickhead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.picker .preview {
+  flex: 1;
+  height: 34px;
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius);
+}
+
+.picker .modes {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  background: #1c1d24;
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius);
+}
+
+.picker .mode {
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: var(--ink-dim);
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.picker .mode.on { color: #fff; background: var(--accent); }
+
+.picker .chan { margin-bottom: 8px; }
+
+.picker .chanhead {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.picker .clab {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.picker .cval {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--accent);
+}
+
+/* The gradient track previews what moving this slider alone would do. */
+.picker .chan input[type=range]::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--track);
+  border: 1px solid var(--panel-edge);
+}
+
+.picker .chan input[type=range]::-moz-range-track {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--track);
+  border: 1px solid var(--panel-edge);
+}
+
+.picker .chan input[type=range]::-webkit-slider-thumb {
+  width: 13px;
+  height: 13px;
+  margin-top: -3.5px;
+  background: #fff;
+  border: 2px solid #14151b;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .5);
+}
+
+.picker .chan input[type=range]::-moz-range-thumb {
+  width: 13px;
+  height: 13px;
+  background: #fff;
+  border: 2px solid #14151b;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .5);
+}
+
+.picker .pickfoot {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.picker input[type=text] {
   flex: 1;
   min-width: 0;
   padding: 5px 7px;
   font: inherit;
-  font-size: 12px;
+  font-family: var(--mono);
+  font-size: 11px;
   color: var(--ink);
   background: #202129;
   border: 1px solid var(--panel-edge);
   border-radius: var(--radius);
 }
 
-.row.entry input[type=text]:focus {
-  outline: none;
-  border-color: var(--accent);
-}
+.picker input[type=text]:focus { outline: none; border-color: var(--accent); }
+.picker .btn { width: auto; padding: 5px 12px; white-space: nowrap; }
 
-.row.entry .btn { width: auto; padding: 5px 12px; }
-
-.row.entry .err {
-  flex-basis: 100%;
+.picker .err {
+  margin-top: 6px;
   color: #ff8a8a;
   font-size: 11px;
 }
 
-.row.entry .err:empty { display: none; }
+.picker .err:empty { display: none; }
+
+/* Plane thumbnails ------------------------------------------------------ */
+
+.planegrid { display: flex; flex-wrap: wrap; gap: 5px; }
+
+.planebtn {
+  position: relative;
+  padding: 0;
+  line-height: 0;
+  background: #0d0e12;
+  border: 1px solid var(--panel-edge);
+  border-radius: 5px;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.planebtn:hover { border-color: var(--ink-dim); }
+.planebtn.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+
+.planebtn.bad {
+  width: 46px;
+  height: 46px;
+  background: repeating-linear-gradient(45deg, #1c1d24 0 4px, #16171d 4px 8px);
+}
+
+.planebtn .plabel {
+  display: block;
+  padding: 2px 0 3px;
+  font-family: var(--mono);
+  font-size: 9px;
+  line-height: 1;
+  color: var(--ink-dim);
+}
+
+.planebtn.on .plabel { color: var(--accent); }
+
+/* Cut face panel -------------------------------------------------------- */
+
+#slicePanel {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  width: 274px;
+  padding: 10px;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius);
+}
+
+#slicePanel.hidden { display: none; }
+
+#slicePanel header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+#slicePanel h3 {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+#slicePanel .caption {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--accent);
+}
+
+#sliceView {
+  display: block;
+  width: 254px;
+  height: 254px;
+  border-radius: 4px;
+  background:
+    repeating-conic-gradient(#1b1c22 0 25%, #141419 0 50%) 0 0 / 14px 14px;
+}
 
 .anchors { display: flex; flex-direction: column; gap: 4px; }
 
@@ -330,6 +536,7 @@ body.panel-hidden #panelToggle { left: 12px; }
 }
 
 body.panel-hidden #ramp { left: 14px; }
+body.slice-open #ramp { right: 302px; }
 #ramp.hidden { display: none; }
 
 #ramp .strip {
@@ -370,9 +577,10 @@ body.panel-hidden #ramp { left: 14px; }
 
 #ramp .btn { width: auto; padding: 4px 12px; }
 
+/* Kept clear of the cut-face panel on the right. */
 #readout {
   position: fixed;
-  right: 14px;
+  left: 362px;
   top: 14px;
   display: flex;
   align-items: center;
@@ -398,6 +606,8 @@ body.panel-hidden #ramp { left: 14px; }
 
 #readout .hex { font-weight: 600; }
 #readout .coords { color: var(--ink-dim); }
+
+body.panel-hidden #readout { left: 52px; }
 
 #toast {
   position: fixed;

@@ -31,6 +31,17 @@
     rampSteps: 16,
     rampRes: 10,
 
+    /* plane slices */
+    planes: [],
+    planeIndex: 0,
+    sliceIn3D: true,
+    slice3DRes: 58,
+
+    /* the add-a-color picker */
+    pickerMode: 'hsv',
+    draftRgb: [0.85, 0.35, 0.15],
+    draftHsv: [20, 82, 85],
+
     /* how it looks */
     pointSize: 5,
     opacity: 1,
@@ -69,11 +80,22 @@
   function nestReady() { return isNested() && model.perceptual; }
 
   function hasPair() { return state.anchors.length >= 2; }
-  function hasRamp() { return hasPair() && state.rampMode !== 'none'; }
-  function isPatch() {
-    return state.anchors.length >= 3 &&
-           (state.rampMode === 'patch' || state.rampMode === 'auto');
+  function hasTriple() { return state.anchors.length >= 3; }
+
+  /* With three or more points "auto" means cut a plane; with two there is no
+   * plane to cut, so it falls back to a line. */
+  function rampKind() {
+    var m = state.rampMode;
+    if (m === 'none') return 'none';
+    if (!hasPair()) return 'none';
+    if (m === 'auto') return hasTriple() ? 'plane' : 'line';
+    if ((m === 'plane' || m === 'blend') && !hasTriple()) return 'line';
+    return m;
   }
+
+  function hasBlend() { return rampKind() === 'blend'; }
+  function hasLine() { return rampKind() === 'line'; }
+  function hasPlane() { return rampKind() === 'plane'; }
 
   /* ------------------------------------------------------------- controls */
 
@@ -144,25 +166,46 @@
     { sec: 'slice', type: 'range', key: 'cutStartDeg', label: 'Cutaway position',
       min: 0, max: 359, step: 1, unit: '°' },
 
-    { sec: 'points', type: 'entry' },
+    { sec: 'add', type: 'picker' },
+
     { sec: 'points', type: 'anchors' },
-    { sec: 'points', type: 'select', key: 'rampMode', label: 'Between points', rebuild: true,
+    { sec: 'points', type: 'note',
+      when: function () { return !state.anchors.length; },
+      note: function () {
+        return 'No points yet. Add two to draw a ramp between them, or three to ' +
+               'cut a plane through the solid.';
+      } },
+
+    { sec: 'ramp', type: 'select', key: 'rampMode', label: 'Mode', rebuild: true,
       when: hasPair,
       options: [
-        { value: 'auto', label: 'Auto — line, or fill from 3' },
+        { value: 'auto', label: 'Auto — line, or plane from 3' },
         { value: 'line', label: 'Line through points' },
-        { value: 'patch', label: 'Fill the shape' },
+        { value: 'plane', label: 'Plane slice' },
+        { value: 'blend', label: 'Blend fill' },
         { value: 'none', label: 'Nothing — points only' }
       ] },
-    { sec: 'points', type: 'select', key: 'rampSpace', label: 'Blend in', rebuild: true,
-      when: hasRamp,
+    { sec: 'ramp', type: 'select', key: 'rampSpace', label: 'Blend in', rebuild: true,
+      when: function () { return hasLine() || hasBlend(); },
       options: CC.ramp.spaces.map(function (s) { return { value: s.id, label: s.name }; }) },
-    { sec: 'points', type: 'range', key: 'rampSteps', label: 'Steps per segment',
-      min: 2, max: 64, step: 1, rebuild: true,
-      when: function () { return hasRamp() && !isPatch(); } },
-    { sec: 'points', type: 'range', key: 'rampRes', label: 'Fill resolution',
-      min: 2, max: 26, step: 1, rebuild: true,
-      when: function () { return hasRamp() && isPatch(); } },
+    { sec: 'ramp', type: 'range', key: 'rampSteps', label: 'Steps per segment',
+      min: 2, max: 64, step: 1, rebuild: true, when: hasLine },
+    { sec: 'ramp', type: 'range', key: 'rampRes', label: 'Fill resolution',
+      min: 2, max: 26, step: 1, rebuild: true, when: hasBlend },
+    { sec: 'ramp', type: 'note', when: hasPlane, note: function () {
+        return 'A plane slice shows every color the cut passes through. The three ' +
+               'points only choose the angle of the cut.';
+      } },
+    { sec: 'ramp', type: 'note',
+      when: function () { return !hasPair(); },
+      note: function () { return 'Add at least two points.'; } },
+
+    { sec: 'planes', type: 'planes' },
+    { sec: 'planes', type: 'check', key: 'sliceIn3D', label: 'Show the cut in 3D',
+      rebuild: true, when: hasPlane },
+    { sec: 'planes', type: 'range', key: 'slice3DRes', label: 'Cut density in 3D',
+      min: 16, max: 110, step: 1, rebuild: true,
+      when: function () { return hasPlane() && state.sliceIn3D; } },
 
     { sec: 'view', type: 'color', key: 'background', label: 'Background' },
     { sec: 'view', type: 'presets', key: 'background',
@@ -193,32 +236,43 @@
     if (def.type === 'note') {
       row.className = 'row note';
       entry.sync = function () { row.textContent = def.note(); };
-    } else if (def.type === 'entry') {
-      row.className = 'row entry';
-      var field = document.createElement('input');
-      field.type = 'text';
-      field.spellcheck = false;
-      field.placeholder = '#ff8800 · 255 136 0 · hsv 30 100 100';
-      var addBtn = el('button', 'btn', 'Add');
-      var err = el('div', 'err');
-      row.appendChild(field);
-      row.appendChild(addBtn);
-      row.appendChild(err);
+    } else if (def.type === 'picker') {
+      entry.sync = buildPicker(row);
+    } else if (def.type === 'planes') {
+      row.className = 'row planegrid';
+      entry.sync = function () {
+        row.textContent = '';
 
-      var submit = function () {
-        var rgb = CC.ramp.parseColor(field.value);
-        if (!rgb) {
-          err.textContent = 'Not a color I recognise — try a hex, RGB or HSV triple.';
+        if (!hasTriple()) {
+          row.appendChild(el('div', 'note', 'Add a third point to cut a plane.'));
           return;
         }
-        err.textContent = '';
-        field.value = '';
-        addAnchor(rgb);
+
+        state.planes.forEach(function (p, idx) {
+          var btn = el('button', 'planebtn' + (idx === state.planeIndex ? ' on' : ''));
+          var label = p.combo.map(function (x) { return x + 1; }).join('·');
+
+          if (p.frame) {
+            var cv = document.createElement('canvas');
+            cv.width = cv.height = THUMB;
+            cv.getContext('2d').putImageData(new ImageData(p.thumb, THUMB, THUMB), 0, 0);
+            btn.appendChild(cv);
+            btn.title = 'Plane through points ' + label;
+          } else {
+            btn.classList.add('bad');
+            btn.title = 'Points ' + label + ' are collinear — they define no plane';
+          }
+
+          btn.appendChild(el('span', 'plabel', label));
+          btn.addEventListener('click', function () { selectPlane(idx); });
+          row.appendChild(btn);
+        });
+
+        if (state.planes.length >= CC.slice.MAX_PLANES) {
+          row.appendChild(el('div', 'note',
+            'Showing the first ' + CC.slice.MAX_PLANES + ' combinations.'));
+        }
       };
-      addBtn.addEventListener('click', submit);
-      field.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') { e.preventDefault(); submit(); }
-      });
     } else if (def.type === 'anchors') {
       row.className = 'row anchors';
       entry.sync = function () {
@@ -347,6 +401,238 @@
     dirty = true;
   }
 
+  /* -------------------------------------------------------------- picker */
+
+  var CHANNELS = {
+    rgb: [{ name: 'R', max: 255 }, { name: 'G', max: 255 }, { name: 'B', max: 255 }],
+    hsv: [{ name: 'H', max: 360 }, { name: 'S', max: 100 }, { name: 'V', max: 100 }]
+  };
+
+  function hsvScratch(rgb) {
+    var out = [0, 0, 0];
+    CC.color.rgbToHsv(rgb[0], rgb[1], rgb[2], out);
+    return out;
+  }
+
+  function setDraftRgb(rgb) {
+    state.draftRgb = rgb;
+    var hsv = hsvScratch(rgb);
+    /* Hue is undefined for greys and blacks. Keeping the previous value stops
+     * the hue slider snapping to zero whenever saturation touches the bottom. */
+    var h = hsv[1] < 1e-6 || hsv[2] < 1e-6 ? state.draftHsv[0] : hsv[0] * 360;
+    state.draftHsv = [h, hsv[1] * 100, hsv[2] * 100];
+  }
+
+  function setDraftHsv(hsv) {
+    state.draftHsv = hsv;
+    var rgb = [0, 0, 0];
+    CC.color.hsvToRgb(hsv[0] / 360, hsv[1] / 100, hsv[2] / 100, rgb);
+    state.draftRgb = rgb;
+  }
+
+  function hexOf(rgb) {
+    return CC.color.toHex(rgb[0], rgb[1], rgb[2]).toUpperCase();
+  }
+
+  /* Track backgrounds preview what moving that one slider would do, which makes
+   * the picker far easier to aim than three bare sliders. */
+  function trackFor(i) {
+    var stops = [];
+    var rgb = [0, 0, 0];
+    var k;
+
+    if (state.pickerMode === 'rgb') {
+      for (k = 0; k <= 1; k++) {
+        var c = state.draftRgb.slice();
+        c[i] = k;
+        stops.push(hexOf(c));
+      }
+    } else if (i === 0) {
+      for (k = 0; k <= 6; k++) {
+        CC.color.hsvToRgb(k / 6, Math.max(state.draftHsv[1] / 100, 0.15),
+          Math.max(state.draftHsv[2] / 100, 0.35), rgb);
+        stops.push(hexOf(rgb));
+      }
+    } else {
+      var hsv = state.draftHsv;
+      for (k = 0; k <= 1; k++) {
+        var v = [hsv[0] / 360, hsv[1] / 100, hsv[2] / 100];
+        v[i] = k;
+        CC.color.hsvToRgb(v[0], v[1], v[2], rgb);
+        stops.push(hexOf(rgb));
+      }
+    }
+    return 'linear-gradient(90deg,' + stops.join(',') + ')';
+  }
+
+  function buildPicker(row) {
+    row.className = 'row picker';
+
+    var preview = el('div', 'preview');
+    var modes = el('div', 'modes');
+    var buttons = {};
+
+    ['hsv', 'rgb'].forEach(function (m) {
+      var b = el('button', 'mode', m.toUpperCase());
+      b.addEventListener('click', function () {
+        state.pickerMode = m;
+        syncPanel();
+      });
+      buttons[m] = b;
+      modes.appendChild(b);
+    });
+
+    var head = el('div', 'pickhead');
+    head.appendChild(preview);
+    head.appendChild(modes);
+    row.appendChild(head);
+
+    var chans = [0, 1, 2].map(function (i) {
+      var lab = el('span', 'clab');
+      var num = el('span', 'cval');
+      var top = el('div', 'chanhead');
+      top.appendChild(lab);
+      top.appendChild(num);
+
+      var inp = document.createElement('input');
+      inp.type = 'range';
+      inp.addEventListener('input', function () {
+        var v = parseFloat(inp.value);
+        if (state.pickerMode === 'rgb') {
+          var rgb = state.draftRgb.slice();
+          rgb[i] = v / 255;
+          setDraftRgb(rgb);
+        } else {
+          var hsv = state.draftHsv.slice();
+          hsv[i] = v;
+          setDraftHsv(hsv);
+        }
+        syncPanel();
+      });
+
+      var line = el('div', 'chan');
+      line.appendChild(top);
+      line.appendChild(inp);
+      row.appendChild(line);
+      return { lab: lab, num: num, inp: inp };
+    });
+
+    var field = document.createElement('input');
+    field.type = 'text';
+    field.spellcheck = false;
+    field.placeholder = '#ff8800 · 255 136 0 · hsv 30 100 100';
+
+    var addBtn = el('button', 'btn', 'Add point');
+    var err = el('div', 'err');
+    var foot = el('div', 'pickfoot');
+    foot.appendChild(field);
+    foot.appendChild(addBtn);
+    row.appendChild(foot);
+    row.appendChild(err);
+
+    /* Typing a colour and pressing Enter loads it into the picker and adds it in
+     * one move; the button adds whatever the sliders currently hold. */
+    field.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      var rgb = CC.ramp.parseColor(field.value);
+      if (!rgb) {
+        err.textContent = 'Not a color I recognise — try a hex, RGB or HSV triple.';
+        return;
+      }
+      err.textContent = '';
+      setDraftRgb(rgb);
+      addAnchor(rgb);
+    });
+
+    addBtn.addEventListener('click', function () {
+      err.textContent = '';
+      addAnchor(state.draftRgb.slice());
+    });
+
+    return function sync() {
+      var mode = state.pickerMode;
+      var spec = CHANNELS[mode];
+      var values = mode === 'rgb'
+        ? state.draftRgb.map(function (v) { return v * 255; })
+        : state.draftHsv;
+
+      preview.style.background = hexOf(state.draftRgb);
+      buttons.rgb.classList.toggle('on', mode === 'rgb');
+      buttons.hsv.classList.toggle('on', mode === 'hsv');
+
+      chans.forEach(function (c, i) {
+        c.lab.textContent = spec[i].name;
+        c.num.textContent = Math.round(values[i]);
+        c.inp.min = 0;
+        c.inp.max = spec[i].max;
+        c.inp.step = 1;
+        c.inp.value = Math.round(values[i]);
+        c.inp.style.setProperty('--track', trackFor(i));
+      });
+
+      if (document.activeElement !== field) field.value = hexOf(state.draftRgb);
+    };
+  }
+
+  /* -------------------------------------------------------------- planes */
+
+  var THUMB = 44;
+  var SLICE_SIZE = 256;
+
+  function selectPlane(idx) {
+    state.planeIndex = idx;
+    rebuild_();
+    syncPanel();
+    dirty = true;
+  }
+
+  function buildSlices() {
+    state.planes = hasTriple() ? CC.slice.build(model, state.anchors, THUMB) : [];
+    if (state.planeIndex >= state.planes.length) state.planeIndex = 0;
+  }
+
+  function updateSlicePanel() {
+    var host = document.getElementById('slicePanel');
+    var plane = hasPlane() ? state.planes[state.planeIndex] : null;
+
+    if (!plane || !plane.frame) {
+      host.classList.add('hidden');
+      document.body.classList.remove('slice-open');
+      return;
+    }
+
+    host.classList.remove('hidden');
+    document.body.classList.add('slice-open');
+
+    var cv = document.getElementById('sliceView');
+    var ctx = cv.getContext('2d');
+    ctx.clearRect(0, 0, SLICE_SIZE, SLICE_SIZE);
+    ctx.putImageData(
+      new ImageData(CC.slice.raster(model, plane.frame, SLICE_SIZE), SLICE_SIZE, SLICE_SIZE), 0, 0);
+
+    /* Ring the three colours that chose this cut, so you can see where they sit
+     * on a face that is mostly other colours. */
+    var R = CC.slice.RADIUS;
+    plane.frame.points.forEach(function (p) {
+      var uv = CC.slice.uvOf(plane.frame, p);
+      var px = ((uv[0] / R) + 1) / 2 * (SLICE_SIZE - 1);
+      var py = ((-uv[1] / R) + 1) / 2 * (SLICE_SIZE - 1);
+
+      ctx.beginPath();
+      ctx.arc(px, py, 5, 0, Math.PI * 2);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(0,0,0,.65)';
+      ctx.stroke();
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(255,255,255,.9)';
+      ctx.stroke();
+    });
+
+    host.querySelector('.caption').textContent =
+      'points ' + plane.combo.map(function (i) { return i + 1; }).join(' · ');
+  }
+
   /* ------------------------------------------------------------- anchors */
 
   function anchorsChanged() {
@@ -374,11 +660,17 @@
 
   function rebuild_() {
     var t0 = performance.now();
+    /* Resolved once here so the cloud, ramp and slice builders all agree on
+     * what "auto" meant for the current number of points. */
+    state.rampKind = rampKind();
+    /* Planes first: the cloud builder scatters the selected cut into 3D. */
+    buildSlices();
     cloud = CC.cloud.build(model, state);
     var ms = performance.now() - t0;
     document.getElementById('count').textContent =
       cloud.count.toLocaleString() + ' points · ' + ms.toFixed(0) + ' ms';
     updateStrip();
+    updateSlicePanel();
     dirty = true;
   }
 
@@ -573,6 +865,19 @@
 
   document.getElementById('copyRamp').addEventListener('click', copyRamp);
 
+  function setTab(name) {
+    Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (b) {
+      b.classList.toggle('on', b.getAttribute('data-tab') === name);
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('.tabpanel'), function (p) {
+      p.classList.toggle('hidden', p.getAttribute('data-tab') !== name);
+    });
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (b) {
+    b.addEventListener('click', function () { setTab(b.getAttribute('data-tab')); });
+  });
+
   global.addEventListener('resize', function () { dirty = true; });
 
   var params = {};
@@ -593,6 +898,7 @@
   }
 
   buildPanel();
+  setTab('display');
   syncPanel();
   rebuild_();
   fitView();

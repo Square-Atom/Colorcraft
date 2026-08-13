@@ -18,41 +18,74 @@
     <p id="count">—</p>
   </header>
 
-  <section>
-    <h2>Model</h2>
-    <div id="sec-model"></div>
-  </section>
+  <nav class="tabs">
+    <button class="tab" data-tab="display">Display</button>
+    <button class="tab" data-tab="palette">Palette</button>
+  </nav>
 
-  <section>
-    <h2>Density</h2>
-    <div id="sec-density"></div>
-  </section>
+  <div class="tabpanel" data-tab="display">
+    <section>
+      <h2>Model</h2>
+      <div id="sec-model"></div>
+    </section>
 
-  <section>
-    <h2>Appearance</h2>
-    <div id="sec-appearance"></div>
-  </section>
+    <section>
+      <h2>Density</h2>
+      <div id="sec-density"></div>
+    </section>
 
-  <section>
-    <h2>Points &amp; ramps</h2>
-    <div id="sec-points"></div>
-  </section>
+    <section>
+      <h2>Appearance</h2>
+      <div id="sec-appearance"></div>
+    </section>
 
-  <section>
-    <h2>Slice &amp; filter</h2>
-    <div id="sec-slice"></div>
-  </section>
+    <section>
+      <h2>Clip &amp; cutaway</h2>
+      <div id="sec-slice"></div>
+    </section>
 
-  <section>
-    <h2>Scene</h2>
-    <div id="sec-view"></div>
-  </section>
+    <section>
+      <h2>Scene</h2>
+      <div id="sec-view"></div>
+    </section>
+  </div>
+
+  <div class="tabpanel" data-tab="palette">
+    <section>
+      <h2>Add a color</h2>
+      <div id="sec-add"></div>
+    </section>
+
+    <section>
+      <h2>Points</h2>
+      <div id="sec-points"></div>
+    </section>
+
+    <section>
+      <h2>Between points</h2>
+      <div id="sec-ramp"></div>
+    </section>
+
+    <section>
+      <h2>Planes</h2>
+      <div id="sec-planes"></div>
+    </section>
+  </div>
 
   <footer>
     <p><b>Drag</b> rotate · <b>Shift/right-drag</b> pan · <b>Wheel</b> zoom</p>
     <p><b>Click</b> a point to copy its hex · <b>R</b> reset · <b>Space</b> spin · <b>H</b> hide panel</p>
   </footer>
 </aside>
+
+<section id="slicePanel" class="hidden">
+  <header>
+    <h3>Cut face</h3>
+    <span class="caption"></span>
+  </header>
+  <canvas id="sliceView" width="256" height="256"></canvas>
+  <div class="planes"></div>
+</section>
 
 <div id="readout" class="hidden">
   <span class="chip"></span>
@@ -75,6 +108,7 @@
 <script src="js/models.js"></script>
 <script src="js/cloud.js"></script>
 <script src="js/ramp.js"></script>
+<script src="js/slice.js"></script>
 <script src="js/renderer.js"></script>
 <script src="js/app.js"></script>
 </body>

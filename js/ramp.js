@@ -290,10 +290,10 @@
     var meta = [0, 0, 0];
     var list = [];
 
-    if (o.rampMode !== 'none' && anchors.length >= 2) {
-      var patch = anchors.length >= 3 &&
-                  (o.rampMode === 'patch' || o.rampMode === 'auto');
-      list = patch
+    /* The caller resolves which kind of ramp is wanted; a plane slice produces
+     * no ramp points at all, since the cut face carries its own colours. */
+    if (o.rampKind === 'line' || o.rampKind === 'blend') {
+      list = o.rampKind === 'blend'
         ? buildPatch(orderByHue(anchors), space, o.rampRes)
         : buildLine(anchors, space, o.rampSteps);
 

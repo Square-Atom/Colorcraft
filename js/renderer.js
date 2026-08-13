@@ -141,6 +141,7 @@
       if (px < -margin || px > W + margin || py < -margin || py > H + margin) continue;
 
       var grow = kind === KIND.ANCHOR ? 2.4 : kind === KIND.RAMP ? 1.35 : 1;
+      if (kind === KIND.SLICE) grow = 1.15;
 
       sxA[vis] = px;
       syA[vis] = py;

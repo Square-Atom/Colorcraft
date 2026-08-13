@@ -16,11 +16,14 @@
   var CC = global.CC || (global.CC = {});
   var TAU = Math.PI * 2;
 
+  /* Anything at RAMP or above was put there by the user, which is what the
+   * renderer keys off to draw it at full strength and exempt it from filters. */
   var KIND = CC.KIND = {
     SOLID: 0,     /* the colour solid itself */
     ENVELOPE: 1,  /* greyed hull of a wider gamut */
-    RAMP: 2,      /* generated gradient or patch */
-    ANCHOR: 3     /* a colour the user typed in */
+    RAMP: 2,      /* generated gradient or blend fill */
+    ANCHOR: 3,    /* a colour the user typed in */
+    SLICE: 4      /* the cut face of a plane through the solid */
   };
 
   function Builder() {
@@ -200,8 +203,9 @@
         if (opts.sampling === 'nest' && model.perceptual) addEnvelope(b, model, opts);
       }
 
-      /* User points and their ramps join the same cloud so they depth-sort
+      /* User points, ramps and slices join the same cloud so they depth-sort
        * against the solid instead of floating in front of it. */
+      if (CC.slice) CC.slice.appendTo(b, model, opts);
       var generated = CC.ramp ? CC.ramp.appendTo(b, model, opts) : [];
 
       var out = b.finish();
