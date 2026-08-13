@@ -171,6 +171,46 @@
     for (i = 0; i < vis; i++) order[starts[(sdA[i] - dmin) * scale | 0]++] = i;
 
     this.drawPoints(cloud, s, bg, vis, dmin, span);
+    this.drawDraft(project, s);
+  };
+
+  /* The colour currently held in the picker, marked where it would land if it
+   * were added. Drawn as an inverted triangle so it reads as a cursor rather
+   * than a committed point, and drawn last rather than sorted into the cloud:
+   * a preview that disappears inside a dense solid is no use, and this way
+   * moving a slider costs a repaint instead of a rebuild. */
+  Renderer.prototype.drawDraft = function (project, s) {
+    var d = s.draft;
+    if (!d) return;
+
+    var out = [0, 0, 0, 0];
+    var r = d.C * s.radiusScale;
+    if (!project(r * Math.cos(d.h), (d.L - 0.5) * s.heightScale, r * Math.sin(d.h), out)) return;
+
+    var ctx = this.ctx;
+    var size = Math.max(9, s.pointSize * out[3] * 0.01 * 2.6);
+    var px = out[0], py = out[1];
+    var half = size * 0.5;
+
+    ctx.beginPath();
+    ctx.moveTo(px - half, py - size * 0.42);
+    ctx.lineTo(px + half, py - size * 0.42);
+    ctx.lineTo(px, py + size * 0.6);
+    ctx.closePath();
+
+    ctx.fillStyle = 'rgb(' + Math.round(CC.color.clamp01(d.rgb[0]) * 255) + ',' +
+                             Math.round(CC.color.clamp01(d.rgb[1]) * 255) + ',' +
+                             Math.round(CC.color.clamp01(d.rgb[2]) * 255) + ')';
+    ctx.fill();
+
+    /* Outlined twice so the marker holds up over any colour behind it. */
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(0,0,0,.6)';
+    ctx.stroke();
+    ctx.lineWidth = 1.4;
+    ctx.strokeStyle = 'rgba(255,255,255,.95)';
+    ctx.stroke();
   };
 
   Renderer.prototype.drawPoints = function (cloud, s, bg, vis, dmin, span) {

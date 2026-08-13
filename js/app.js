@@ -40,6 +40,7 @@
     slice3DRes: 58,
 
     /* the add-a-color picker */
+    activeTab: 'display',
     pickerMode: 'hsv',
     draftRgb: [0.85, 0.35, 0.15],
     draftHsv: [20, 82, 85],
@@ -514,6 +515,7 @@
           setDraftHsv(hsv);
         }
         syncPanel();
+        dirty = true;
       });
 
       var line = el('div', 'chan');
@@ -895,12 +897,14 @@
   document.getElementById('copyRamp').addEventListener('click', copyRamp);
 
   function setTab(name) {
+    state.activeTab = name;
     Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (b) {
       b.classList.toggle('on', b.getAttribute('data-tab') === name);
     });
     Array.prototype.forEach.call(document.querySelectorAll('.tabpanel'), function (p) {
       p.classList.toggle('hidden', p.getAttribute('data-tab') !== name);
     });
+    dirty = true;
   }
 
   Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (b) {
@@ -910,6 +914,7 @@
   global.addEventListener('resize', function () { dirty = true; });
 
   var params = {};
+  var draftLch = [0, 0, 0];
 
   function frame() {
     renderer.resize();
@@ -920,6 +925,16 @@
       params.model = model;
       params.cutStart = state.cutStartDeg * DEG;
       params.cutSize = state.cutSizeDeg * DEG;
+
+      /* Only while the picker is on screen -- elsewhere it would be a marker
+       * for a colour nothing is currently editing. */
+      params.draft = null;
+      if (state.activeTab === 'palette') {
+        model.fromRGB(state.draftRgb[0], state.draftRgb[1], state.draftRgb[2], draftLch);
+        params.draft = {
+          L: draftLch[0], C: draftLch[1], h: draftLch[2], rgb: state.draftRgb
+        };
+      }
       renderer.render(cloud, params);
       dirty = false;
     }

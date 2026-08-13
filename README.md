@@ -92,6 +92,12 @@ sliders whose tracks show what moving that one slider would do. Or type it:
 Bare triples are read as 0–255 unless they look normalised (`0.5 0.2 0.9`).
 Enter adds immediately; the button adds whatever the sliders hold.
 
+An inverted triangle in the 3D view marks where the color currently in the
+picker would land, and follows the sliders as you move them. It is a preview,
+not a point — nothing is added until you say so. It draws over the cloud rather
+than inside it, so it stays visible even when the color sits deep in the solid,
+and it appears only while the Palette tab is open.
+
 Each color becomes a ringed marker in the solid, and the points are numbered so
 the plane list can refer to them.
 
