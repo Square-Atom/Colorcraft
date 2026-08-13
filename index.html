@@ -72,12 +72,15 @@
     <h2>Planes</h2>
     <div id="sec-planes"></div>
   </section>
-
-  <section id="slicePanel" class="hidden">
-    <h2>Cut face <span class="caption"></span></h2>
-    <canvas id="sliceView" width="256" height="256"></canvas>
-  </section>
 </aside>
+
+<!-- Outside both panels on purpose: backdrop-filter makes an ancestor the
+     containing block for fixed children, and the panel's overflow then clips
+     them. As a child of body it is anchored to the viewport, as intended. -->
+<section id="slicePanel" class="hidden">
+  <h2>Cut face <span class="caption"></span></h2>
+  <canvas id="sliceView" width="256" height="256"></canvas>
+</section>
 
 <div id="readout" class="hidden">
   <span class="chip"></span>

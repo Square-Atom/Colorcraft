@@ -452,18 +452,26 @@ body.right-hidden #toggleRight { right: 12px; }
 
 /* Cut face -----------------------------------------------------------------
  *
- * A small window pinned to the palette's bottom-left corner rather than a
- * section in the flow, so the cut stays in view while the panel is scrolled.
- * Its right offset is the panel width less its padding and this window's own
- * width, which is why it changes with the panel at the breakpoint below.
+ * A floating window over the view rather than a section in a panel, parked in
+ * the free corner between the two panels and resizable by its grip. Anchored
+ * bottom-right, so resizing grows it up and to the left, into open space.
+ *
+ * It never collides with the swatch strip below: a plane slice generates no
+ * ramp colours, so the strip is hidden whenever this window is showing.
  */
 
 #slicePanel {
   position: fixed;
   z-index: 5;
   bottom: 14px;
-  right: 138px;
-  width: 170px;
+  right: 338px;
+  width: 240px;
+  min-width: 130px;
+  max-width: 70vw;
+  /* Horizontal only: the face is square and the canvas height follows its
+   * width, so one axis scales the whole window and it can never letterbox. */
+  resize: horizontal;
+  overflow: hidden;
   /* Overrides the section margin it would otherwise inherit, which offsets a
    * fixed box from the edge it is anchored to. */
   margin: 0;
@@ -476,13 +484,24 @@ body.right-hidden #toggleRight { right: 12px; }
   transition: right .18s ease;
 }
 
-#slicePanel.hidden,
-body.right-hidden #slicePanel { display: none; }
+#slicePanel.hidden { display: none; }
 
+/* Slides across to keep its corner when the palette folds away. */
+body.right-hidden #slicePanel { right: 14px; }
+
+/* Styled in full rather than inherited: this lives outside the panels now. */
 #slicePanel h2 {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
   margin: 0 0 6px;
   padding: 0;
   border: 0;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
 }
 
 #slicePanel .caption {
@@ -682,5 +701,5 @@ body.left-hidden #readout { left: 52px; }
   body.left-hidden #ramp { left: 14px; }
   body.right-hidden #ramp { right: 14px; }
   #readout { left: 338px; }
-  #slicePanel { right: 100px; }
+  #slicePanel { right: 300px; }
 }
