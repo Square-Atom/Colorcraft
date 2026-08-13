@@ -22,8 +22,9 @@
     SOLID: 0,     /* the colour solid itself */
     ENVELOPE: 1,  /* greyed hull of a wider gamut */
     RAMP: 2,      /* generated gradient or blend fill */
-    ANCHOR: 3,    /* a colour the user typed in */
-    SLICE: 4      /* the cut face of a plane through the solid */
+    ANCHOR: 3,    /* a colour the user added */
+    SLICE: 4,     /* the cut face of a plane through the solid */
+    SELECTED: 5   /* the one point the picker is currently editing */
   };
 
   function Builder() {

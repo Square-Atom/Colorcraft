@@ -39,11 +39,10 @@
     soloPlane: false,
     slice3DRes: 58,
 
-    /* the add-a-color picker */
+    /* editing */
     activeTab: 'display',
+    selected: -1,
     pickerMode: 'hsv',
-    draftRgb: [0.85, 0.35, 0.15],
-    draftHsv: [20, 82, 85],
 
     /* how it looks */
     pointSize: 5,
@@ -169,14 +168,12 @@
     { sec: 'slice', type: 'range', key: 'cutStartDeg', label: 'Cutaway position',
       min: 0, max: 359, step: 1, unit: '°' },
 
-    { sec: 'add', type: 'picker' },
-
     { sec: 'points', type: 'anchors' },
     { sec: 'points', type: 'note',
       when: function () { return !state.anchors.length; },
       note: function () {
-        return 'No points yet. Add two to draw a ramp between them, or three to ' +
-               'cut a plane through the solid.';
+        return 'Add a point, then set its color. Two points draw a ramp between ' +
+               'them; three cut a plane through the solid.';
       } },
 
     { sec: 'ramp', type: 'select', key: 'rampMode', label: 'Mode', rebuild: true,
@@ -243,8 +240,6 @@
     if (def.type === 'note') {
       row.className = 'row note';
       entry.sync = function () { row.textContent = def.note(); };
-    } else if (def.type === 'picker') {
-      entry.sync = buildPicker(row);
     } else if (def.type === 'planes') {
       row.className = 'row planegrid';
       entry.sync = function () {
@@ -281,28 +276,7 @@
         }
       };
     } else if (def.type === 'anchors') {
-      row.className = 'row anchors';
-      entry.sync = function () {
-        row.textContent = '';
-        state.anchors.forEach(function (a, idx) {
-          var hex = CC.color.toHex(a.rgb[0], a.rgb[1], a.rgb[2]).toUpperCase();
-          var item = el('div', 'anchor');
-          var chip = el('span', 'chip');
-          chip.style.background = hex;
-          var del = el('button', 'x', '×');
-          del.title = 'Remove';
-          del.addEventListener('click', function () { removeAnchor(idx); });
-          item.appendChild(chip);
-          item.appendChild(el('span', 'hex', hex));
-          item.appendChild(del);
-          row.appendChild(item);
-        });
-        if (state.anchors.length) {
-          var clear = el('button', 'btn', 'Clear all points');
-          clear.addEventListener('click', clearAnchors);
-          row.appendChild(clear);
-        }
-      };
+      entry.sync = buildAnchorList(row);
     } else if (def.type === 'button') {
       var btn = el('button', 'btn', def.label);
       btn.addEventListener('click', def.action);
@@ -421,20 +395,28 @@
     return out;
   }
 
-  function setDraftRgb(rgb) {
-    state.draftRgb = rgb;
-    var hsv = hsvScratch(rgb);
-    /* Hue is undefined for greys and blacks. Keeping the previous value stops
-     * the hue slider snapping to zero whenever saturation touches the bottom. */
-    var h = hsv[1] < 1e-6 || hsv[2] < 1e-6 ? state.draftHsv[0] : hsv[0] * 360;
-    state.draftHsv = [h, hsv[1] * 100, hsv[2] * 100];
+  /* Each point carries both representations. HSV is kept alongside RGB rather
+   * than derived on demand because hue is undefined for greys and blacks:
+   * storing it stops the hue slider snapping to zero every time saturation or
+   * value touches the bottom. */
+  function makeColor(rgb) {
+    var a = { rgb: rgb.slice(), hsv: [0, 0, 0] };
+    setColorRgb(a, rgb);
+    return a;
   }
 
-  function setDraftHsv(hsv) {
-    state.draftHsv = hsv;
+  function setColorRgb(a, rgb) {
+    a.rgb = rgb.slice();
+    var hsv = hsvScratch(rgb);
+    var h = hsv[1] < 1e-6 || hsv[2] < 1e-6 ? a.hsv[0] : hsv[0] * 360;
+    a.hsv = [h, hsv[1] * 100, hsv[2] * 100];
+  }
+
+  function setColorHsv(a, hsv) {
+    a.hsv = hsv.slice();
     var rgb = [0, 0, 0];
     CC.color.hsvToRgb(hsv[0] / 360, hsv[1] / 100, hsv[2] / 100, rgb);
-    state.draftRgb = rgb;
+    a.rgb = rgb;
   }
 
   function hexOf(rgb) {
@@ -443,27 +425,28 @@
 
   /* Track backgrounds preview what moving that one slider would do, which makes
    * the picker far easier to aim than three bare sliders. */
-  function trackFor(i) {
+  function trackFor(a, i) {
     var stops = [];
     var rgb = [0, 0, 0];
     var k;
 
     if (state.pickerMode === 'rgb') {
       for (k = 0; k <= 1; k++) {
-        var c = state.draftRgb.slice();
+        var c = a.rgb.slice();
         c[i] = k;
         stops.push(hexOf(c));
       }
     } else if (i === 0) {
+      /* Floors on saturation and value so the hue track still reads as a
+       * spectrum when the colour itself is nearly black or grey. */
       for (k = 0; k <= 6; k++) {
-        CC.color.hsvToRgb(k / 6, Math.max(state.draftHsv[1] / 100, 0.15),
-          Math.max(state.draftHsv[2] / 100, 0.35), rgb);
+        CC.color.hsvToRgb(k / 6, Math.max(a.hsv[1] / 100, 0.15),
+          Math.max(a.hsv[2] / 100, 0.35), rgb);
         stops.push(hexOf(rgb));
       }
     } else {
-      var hsv = state.draftHsv;
       for (k = 0; k <= 1; k++) {
-        var v = [hsv[0] / 360, hsv[1] / 100, hsv[2] / 100];
+        var v = [a.hsv[0] / 360, a.hsv[1] / 100, a.hsv[2] / 100];
         v[i] = k;
         CC.color.hsvToRgb(v[0], v[1], v[2], rgb);
         stops.push(hexOf(rgb));
@@ -472,10 +455,10 @@
     return 'linear-gradient(90deg,' + stops.join(',') + ')';
   }
 
-  function buildPicker(row) {
-    row.className = 'row picker';
-
-    var preview = el('div', 'preview');
+  /* The editor for one point, folded into its row in the list. Only the
+   * selected point has one, which is what keeps a long list readable. */
+  function buildEditor(host, idx) {
+    var box = el('div', 'editor picker');
     var modes = el('div', 'modes');
     var buttons = {};
 
@@ -488,11 +471,7 @@
       buttons[m] = b;
       modes.appendChild(b);
     });
-
-    var head = el('div', 'pickhead');
-    head.appendChild(preview);
-    head.appendChild(modes);
-    row.appendChild(head);
+    box.appendChild(modes);
 
     var chans = [0, 1, 2].map(function (i) {
       var lab = el('span', 'clab');
@@ -504,24 +483,27 @@
       var inp = document.createElement('input');
       inp.type = 'range';
       inp.addEventListener('input', function () {
+        var a = state.anchors[idx];
+        if (!a) return;
         var v = parseFloat(inp.value);
+
         if (state.pickerMode === 'rgb') {
-          var rgb = state.draftRgb.slice();
+          var rgb = a.rgb.slice();
           rgb[i] = v / 255;
-          setDraftRgb(rgb);
+          setColorRgb(a, rgb);
         } else {
-          var hsv = state.draftHsv.slice();
+          var hsv = a.hsv.slice();
           hsv[i] = v;
-          setDraftHsv(hsv);
+          setColorHsv(a, hsv);
         }
+        requestRebuild();
         syncPanel();
-        dirty = true;
       });
 
       var line = el('div', 'chan');
       line.appendChild(top);
       line.appendChild(inp);
-      row.appendChild(line);
+      box.appendChild(line);
       return { lab: lab, num: num, inp: inp };
     });
 
@@ -529,43 +511,40 @@
     field.type = 'text';
     field.spellcheck = false;
     field.placeholder = '#ff8800 · 255 136 0 · hsv 30 100 100';
-
-    var addBtn = el('button', 'btn', 'Add point');
     var err = el('div', 'err');
-    var foot = el('div', 'pickfoot');
-    foot.appendChild(field);
-    foot.appendChild(addBtn);
-    row.appendChild(foot);
-    row.appendChild(err);
+    box.appendChild(field);
+    box.appendChild(err);
 
-    /* Typing a colour and pressing Enter loads it into the picker and adds it in
-     * one move; the button adds whatever the sliders currently hold. */
     field.addEventListener('keydown', function (e) {
       if (e.key !== 'Enter') return;
       e.preventDefault();
+      var a = state.anchors[idx];
       var rgb = CC.ramp.parseColor(field.value);
+      if (!a) return;
       if (!rgb) {
         err.textContent = 'Not a color I recognise — try a hex, RGB or HSV triple.';
         return;
       }
       err.textContent = '';
-      setDraftRgb(rgb);
-      addAnchor(rgb);
+      setColorRgb(a, rgb);
+      requestRebuild();
+      syncPanel();
     });
 
-    addBtn.addEventListener('click', function () {
-      err.textContent = '';
-      addAnchor(state.draftRgb.slice());
-    });
+    /* Clicks inside the editor must not bubble up and re-select the row. */
+    box.addEventListener('click', function (e) { e.stopPropagation(); });
+    host.appendChild(box);
 
-    return function sync() {
+    return function () {
+      var a = state.anchors[idx];
+      if (!a) return;
+
       var mode = state.pickerMode;
       var spec = CHANNELS[mode];
       var values = mode === 'rgb'
-        ? state.draftRgb.map(function (v) { return v * 255; })
-        : state.draftHsv;
+        ? a.rgb.map(function (v) { return v * 255; })
+        : a.hsv;
 
-      preview.style.background = hexOf(state.draftRgb);
       buttons.rgb.classList.toggle('on', mode === 'rgb');
       buttons.hsv.classList.toggle('on', mode === 'hsv');
 
@@ -575,11 +554,77 @@
         c.inp.min = 0;
         c.inp.max = spec[i].max;
         c.inp.step = 1;
-        c.inp.value = Math.round(values[i]);
-        c.inp.style.setProperty('--track', trackFor(i));
+        /* Never write back into the control being dragged. */
+        if (document.activeElement !== c.inp) c.inp.value = Math.round(values[i]);
+        c.inp.style.setProperty('--track', trackFor(a, i));
       });
 
-      if (document.activeElement !== field) field.value = hexOf(state.draftRgb);
+      if (document.activeElement !== field) field.value = hexOf(a.rgb);
+    };
+  }
+
+  /* The point list. Its DOM is rebuilt only when the structure changes -- not
+   * on every slider move, which would tear the control out from under the
+   * pointer mid-drag. */
+  function buildAnchorList(row) {
+    row.className = 'row anchors';
+    var signature = null;
+    var refs = [];
+    var editorSync = null;
+
+    function render() {
+      row.textContent = '';
+      refs = [];
+      editorSync = null;
+
+      var add = el('button', 'btn add', '+ Add point');
+      add.addEventListener('click', addPoint);
+      row.appendChild(add);
+
+      state.anchors.forEach(function (a, idx) {
+        var selected = idx === state.selected;
+        var item = el('div', 'anchor' + (selected ? ' on' : ''));
+
+        var head = el('div', 'ahead');
+        var chip = el('span', 'chip');
+        var hex = el('span', 'hex');
+        var del = el('button', 'x', '×');
+        del.title = 'Remove';
+        del.addEventListener('click', function (e) {
+          e.stopPropagation();
+          removeAnchor(idx);
+        });
+
+        head.appendChild(el('span', 'anum', String(idx + 1)));
+        head.appendChild(chip);
+        head.appendChild(hex);
+        head.appendChild(del);
+        head.addEventListener('click', function () { selectPoint(idx); });
+
+        item.appendChild(head);
+        if (selected) editorSync = buildEditor(item, idx);
+
+        refs.push({ chip: chip, hex: hex });
+        row.appendChild(item);
+      });
+
+      if (state.anchors.length) {
+        var clear = el('button', 'btn', 'Clear all points');
+        clear.addEventListener('click', clearAnchors);
+        row.appendChild(clear);
+      }
+    }
+
+    return function () {
+      var sig = state.anchors.length + '|' + state.selected + '|' + state.pickerMode;
+      if (sig !== signature) { signature = sig; render(); }
+
+      state.anchors.forEach(function (a, idx) {
+        var hex = hexOf(a.rgb);
+        refs[idx].chip.style.background = hex;
+        refs[idx].hex.textContent = hex;
+      });
+      if (editorSync) editorSync();
     };
   }
 
@@ -672,22 +717,45 @@
     dirty = true;
   }
 
-  function addAnchor(rgb) {
-    state.anchors = state.anchors.concat([{ rgb: rgb }]);
+  var FIRST_COLOR = [0.85, 0.35, 0.15];
+
+  /* A new point starts from the selected one, so building a set of related
+   * colours means adding and nudging rather than retyping from scratch. */
+  function addPoint() {
+    var base = state.anchors[state.selected];
+    state.anchors = state.anchors.concat([makeColor(base ? base.rgb : FIRST_COLOR)]);
+    state.selected = state.anchors.length - 1;
+    anchorsChanged();
+  }
+
+  function selectPoint(idx) {
+    state.selected = idx;
     anchorsChanged();
   }
 
   function removeAnchor(idx) {
     state.anchors = state.anchors.filter(function (_, i) { return i !== idx; });
+    if (state.selected > idx) state.selected--;
+    else if (state.selected === idx) state.selected = Math.min(idx, state.anchors.length - 1);
     anchorsChanged();
   }
 
   function clearAnchors() {
     state.anchors = [];
+    state.selected = -1;
     anchorsChanged();
   }
 
   /* --------------------------------------------------------------- build */
+
+  var needsRebuild = false;
+
+  /* Dragging a slider fires input faster than the cloud can be rebuilt, so
+   * defer to the frame loop, where many events collapse into one rebuild. */
+  function requestRebuild() {
+    needsRebuild = true;
+    dirty = true;
+  }
 
   function rebuild_() {
     var t0 = performance.now();
@@ -914,27 +982,17 @@
   global.addEventListener('resize', function () { dirty = true; });
 
   var params = {};
-  var draftLch = [0, 0, 0];
 
   function frame() {
     renderer.resize();
     if (state.autoRotate) { state.yaw += 0.0035; dirty = true; }
+    if (needsRebuild) { needsRebuild = false; rebuild_(); }
 
     if (dirty) {
       for (var k in state) params[k] = state[k];
       params.model = model;
       params.cutStart = state.cutStartDeg * DEG;
       params.cutSize = state.cutSizeDeg * DEG;
-
-      /* Only while the picker is on screen -- elsewhere it would be a marker
-       * for a colour nothing is currently editing. */
-      params.draft = null;
-      if (state.activeTab === 'palette') {
-        model.fromRGB(state.draftRgb[0], state.draftRgb[1], state.draftRgb[2], draftLch);
-        params.draft = {
-          L: draftLch[0], C: draftLch[1], h: draftLch[2], rgb: state.draftRgb
-        };
-      }
       renderer.render(cloud, params);
       dirty = false;
     }

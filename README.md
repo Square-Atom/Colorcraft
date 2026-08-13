@@ -80,26 +80,34 @@ space, so there is nothing to nest them inside.
 The panel has two tabs. **Display** holds everything about how the solid is
 drawn; **Palette** is where you add colors and build things from them.
 
-### Adding colors
+### Points
 
-Dial one in with the picker — a live preview, an HSV/RGB toggle, and three
-sliders whose tracks show what moving that one slider would do. Or type it:
+Add a point first, then colour it. **+ Add point** creates one and selects it;
+the selected point's editor unfolds inside its row, and everything else stays
+collapsed. Click any point to select it — its own sliders come back exactly
+where you left them.
+
+The editor has an HSV/RGB toggle, three sliders whose tracks preview what moving
+that one slider would do, and a text field:
 
 ```
 #ff8800   f80   255 136 0   rgb(255,136,0)   hsv 30 100 100   hsl(30,100,50)
 ```
 
 Bare triples are read as 0–255 unless they look normalised (`0.5 0.2 0.9`).
-Enter adds immediately; the button adds whatever the sliders hold.
 
-An inverted triangle in the 3D view marks where the color currently in the
-picker would land, and follows the sliders as you move them. It is a preview,
-not a point — nothing is added until you say so. It draws over the cloud rather
-than inside it, so it stays visible even when the color sits deep in the solid,
-and it appears only while the Palette tab is open.
+A new point starts from the colour of the selected one, so building a set of
+related colours means adding and nudging rather than retyping.
 
-Each color becomes a ringed marker in the solid, and the points are numbered so
-the plane list can refer to them.
+In the 3D view the **selected point is an inverted triangle** and the rest are
+**circles**, all with a white border. Shape rather than colour marks the
+selection, since colour is the one thing about it that keeps changing.
+
+Points are numbered, and the plane list refers to them by those numbers.
+
+Each point keeps its own HSV alongside its RGB rather than deriving it on
+demand. Hue is undefined for greys and blacks, so storing it is what stops the
+hue slider snapping to zero every time saturation or value bottoms out.
 
 ### Plane slices
 

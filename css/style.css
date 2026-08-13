@@ -281,23 +281,10 @@ body.panel-hidden #panelToggle { left: 12px; }
 
 /* Colour picker --------------------------------------------------------- */
 
-.picker .pickhead {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.picker .preview {
-  flex: 1;
-  height: 34px;
-  border: 1px solid var(--panel-edge);
-  border-radius: var(--radius);
-}
-
 .picker .modes {
-  display: flex;
+  display: inline-flex;
   gap: 3px;
+  margin-bottom: 9px;
   padding: 3px;
   background: #1c1d24;
   border: 1px solid var(--panel-edge);
@@ -371,15 +358,9 @@ body.panel-hidden #panelToggle { left: 12px; }
   box-shadow: 0 0 0 1px rgba(255, 255, 255, .5);
 }
 
-.picker .pickfoot {
-  display: flex;
-  gap: 6px;
-  margin-top: 10px;
-}
-
 .picker input[type=text] {
-  flex: 1;
-  min-width: 0;
+  width: 100%;
+  margin-top: 4px;
   padding: 5px 7px;
   font: inherit;
   font-family: var(--mono);
@@ -391,7 +372,6 @@ body.panel-hidden #panelToggle { left: 12px; }
 }
 
 .picker input[type=text]:focus { outline: none; border-color: var(--accent); }
-.picker .btn { width: auto; padding: 5px 12px; white-space: nowrap; }
 
 .picker .err {
   margin-top: 6px;
@@ -483,17 +463,40 @@ body.panel-hidden #panelToggle { left: 12px; }
     repeating-conic-gradient(#1b1c22 0 25%, #141419 0 50%) 0 0 / 14px 14px;
 }
 
-.anchors { display: flex; flex-direction: column; gap: 4px; }
+.anchors { display: flex; flex-direction: column; gap: 5px; }
+
+.anchors .add { margin-bottom: 2px; }
 
 .anchor {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 3px 4px 3px 3px;
   background: #1c1d24;
   border: 1px solid var(--panel-edge);
   border-radius: var(--radius);
+  overflow: hidden;
 }
+
+.anchor.on {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.ahead {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 4px 4px 6px;
+  cursor: pointer;
+}
+
+.ahead:hover { background: #22232b; }
+
+.anum {
+  min-width: 12px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-dim);
+}
+
+.anchor.on .anum { color: var(--accent); }
 
 .anchor .chip {
   width: 18px;
@@ -519,6 +522,13 @@ body.panel-hidden #panelToggle { left: 12px; }
 }
 
 .anchor .x:hover { color: #ff8a8a; }
+
+/* The editor unfolds inside the selected point only. */
+.anchor .editor {
+  padding: 8px 8px 10px;
+  border-top: 1px solid var(--panel-edge);
+  background: #191a21;
+}
 
 /* Swatch strip ---------------------------------------------------------- */
 

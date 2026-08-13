@@ -304,11 +304,13 @@
       }
     }
 
-    /* Anchors last so they sit on top of their own ramp. */
+    /* Anchors last so they sit on top of their own ramp. The selected one is
+     * marked separately so the renderer can give it its own shape. */
     for (var k = 0; k < anchors.length; k++) {
       var rgb = anchors[k].rgb;
       model.fromRGB(rgb[0], rgb[1], rgb[2], meta);
-      b.push(meta[0], meta[1], meta[2], rgb, CC.KIND.ANCHOR, 0);
+      b.push(meta[0], meta[1], meta[2], rgb,
+        k === o.selected ? CC.KIND.SELECTED : CC.KIND.ANCHOR, 0);
     }
 
     return list;

@@ -145,6 +145,7 @@
 
       var grow = kind === KIND.ANCHOR ? 2.4 : kind === KIND.RAMP ? 1.35 : 1;
       if (kind === KIND.SLICE) grow = 1.15;
+      if (kind === KIND.SELECTED) grow = 3;
 
       sxA[vis] = px;
       syA[vis] = py;
@@ -171,46 +172,6 @@
     for (i = 0; i < vis; i++) order[starts[(sdA[i] - dmin) * scale | 0]++] = i;
 
     this.drawPoints(cloud, s, bg, vis, dmin, span);
-    this.drawDraft(project, s);
-  };
-
-  /* The colour currently held in the picker, marked where it would land if it
-   * were added. Drawn as an inverted triangle so it reads as a cursor rather
-   * than a committed point, and drawn last rather than sorted into the cloud:
-   * a preview that disappears inside a dense solid is no use, and this way
-   * moving a slider costs a repaint instead of a rebuild. */
-  Renderer.prototype.drawDraft = function (project, s) {
-    var d = s.draft;
-    if (!d) return;
-
-    var out = [0, 0, 0, 0];
-    var r = d.C * s.radiusScale;
-    if (!project(r * Math.cos(d.h), (d.L - 0.5) * s.heightScale, r * Math.sin(d.h), out)) return;
-
-    var ctx = this.ctx;
-    var size = Math.max(9, s.pointSize * out[3] * 0.01 * 2.6);
-    var px = out[0], py = out[1];
-    var half = size * 0.5;
-
-    ctx.beginPath();
-    ctx.moveTo(px - half, py - size * 0.42);
-    ctx.lineTo(px + half, py - size * 0.42);
-    ctx.lineTo(px, py + size * 0.6);
-    ctx.closePath();
-
-    ctx.fillStyle = 'rgb(' + Math.round(CC.color.clamp01(d.rgb[0]) * 255) + ',' +
-                             Math.round(CC.color.clamp01(d.rgb[1]) * 255) + ',' +
-                             Math.round(CC.color.clamp01(d.rgb[2]) * 255) + ')';
-    ctx.fill();
-
-    /* Outlined twice so the marker holds up over any colour behind it. */
-    ctx.lineJoin = 'round';
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = 'rgba(0,0,0,.6)';
-    ctx.stroke();
-    ctx.lineWidth = 1.4;
-    ctx.strokeStyle = 'rgba(255,255,255,.95)';
-    ctx.stroke();
   };
 
   Renderer.prototype.drawPoints = function (cloud, s, bg, vis, dmin, span) {
@@ -251,7 +212,8 @@
          * let you see through the solid, not to dim what you added. A ring marks
          * anchors, and also ramp points whose true colour left sRGB. */
         ctx.fillStyle = 'rgb(' + css[src] + ')';
-        ring = kind === KIND.ANCHOR ? 1 : (clipped[src] ? 2 : 0);
+        ring = (kind === KIND.ANCHOR || kind === KIND.SELECTED) ? 1
+             : (clipped[src] ? 2 : 0);
       } else if (plain) {
         ctx.fillStyle = 'rgb(' + css[src] + ')';
       } else {
@@ -263,7 +225,18 @@
         ctx.fillStyle = 'rgba(' + (r | 0) + ',' + (g | 0) + ',' + (b | 0) + ',' + aStr + ')';
       }
 
-      if (round || ring) {
+      if (kind === KIND.SELECTED) {
+        /* An inverted triangle, so the point being edited is identifiable by
+         * shape alone rather than by colour -- which is the one thing about it
+         * that keeps changing. */
+        var half = sz * 0.5;
+        ctx.beginPath();
+        ctx.moveTo(sxA[i] - half, syA[i] - sz * 0.4);
+        ctx.lineTo(sxA[i] + half, syA[i] - sz * 0.4);
+        ctx.lineTo(sxA[i], syA[i] + sz * 0.62);
+        ctx.closePath();
+        ctx.fill();
+      } else if (round || ring) {
         ctx.beginPath();
         ctx.arc(sxA[i], syA[i], sz * 0.5, 0, TAU);
         ctx.fill();
@@ -271,14 +244,23 @@
         ctx.fillRect(sxA[i] - sz * 0.5, syA[i] - sz * 0.5, sz, sz);
       }
 
-      if (ring) {
-        /* Solid outline for an anchor, dashed for a clipped ramp point, so the
-         * two stay distinguishable at a glance. */
-        ctx.strokeStyle = 'rgba(' + ink + ',' + (ring === 1 ? 0.95 : 0.8) + ')';
-        ctx.lineWidth = ring === 1 ? 1.6 : 1.1;
-        if (ring === 2) ctx.setLineDash([2, 2]);
+      if (ring === 1) {
+        /* White, backed by a dark halo so it holds up over pale colours and on
+         * a white background. */
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(0,0,0,.55)';
         ctx.stroke();
-        if (ring === 2) ctx.setLineDash([]);
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = 'rgba(255,255,255,.95)';
+        ctx.stroke();
+      } else if (ring === 2) {
+        /* Dashed: a ramp colour that had to be clamped back into sRGB. */
+        ctx.strokeStyle = 'rgba(' + ink + ',.8)';
+        ctx.lineWidth = 1.1;
+        ctx.setLineDash([2, 2]);
+        ctx.stroke();
+        ctx.setLineDash([]);
       }
     }
   };
