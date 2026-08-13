@@ -10,77 +10,72 @@
 
 <canvas id="view"></canvas>
 
-<button id="panelToggle" title="Toggle panel (H)">☰</button>
+<button id="toggleLeft" class="edge-toggle" title="Display settings ( [ )">☰</button>
+<button id="toggleRight" class="edge-toggle" title="Palette ( ] )">☰</button>
 
-<aside id="panel">
+<aside id="panelLeft" class="panel">
   <header>
     <h1>Colorcraft</h1>
     <p id="count">—</p>
   </header>
 
-  <nav class="tabs">
-    <button class="tab" data-tab="display">Display</button>
-    <button class="tab" data-tab="palette">Palette</button>
-  </nav>
+  <section>
+    <h2>Model</h2>
+    <div id="sec-model"></div>
+  </section>
 
-  <div class="tabpanel" data-tab="display">
-    <section>
-      <h2>Model</h2>
-      <div id="sec-model"></div>
-    </section>
+  <section>
+    <h2>Density</h2>
+    <div id="sec-density"></div>
+  </section>
 
-    <section>
-      <h2>Density</h2>
-      <div id="sec-density"></div>
-    </section>
+  <section>
+    <h2>Appearance</h2>
+    <div id="sec-appearance"></div>
+  </section>
 
-    <section>
-      <h2>Appearance</h2>
-      <div id="sec-appearance"></div>
-    </section>
+  <section>
+    <h2>Clip &amp; cutaway</h2>
+    <div id="sec-slice"></div>
+  </section>
 
-    <section>
-      <h2>Clip &amp; cutaway</h2>
-      <div id="sec-slice"></div>
-    </section>
-
-    <section>
-      <h2>Scene</h2>
-      <div id="sec-view"></div>
-    </section>
-  </div>
-
-  <div class="tabpanel" data-tab="palette">
-    <section>
-      <h2>Points</h2>
-      <div id="sec-points"></div>
-    </section>
-
-    <section>
-      <h2>Between points</h2>
-      <div id="sec-ramp"></div>
-    </section>
-
-    <section>
-      <h2>Planes</h2>
-      <div id="sec-planes"></div>
-    </section>
-  </div>
+  <section>
+    <h2>Scene</h2>
+    <div id="sec-view"></div>
+  </section>
 
   <footer>
     <p><b>Drag</b> rotate · <b>Shift/right-drag</b> pan · <b>Wheel</b> zoom</p>
-    <p><b>Click</b> a point to copy its hex · <b>R</b> reset · <b>Space</b> spin · <b>H</b> hide panel</p>
+    <p><b>Click</b> a point to copy its hex · <b>R</b> reset · <b>Space</b> spin</p>
+    <p><b>[</b> and <b>]</b> hide the panels · <b>H</b> hides both</p>
   </footer>
 </aside>
 
-<section id="slicePanel" class="hidden">
+<aside id="panelRight" class="panel">
   <header>
-    <h3>Cut face</h3>
-    <span class="caption"></span>
+    <h1>Palette</h1>
   </header>
-  <canvas id="sliceView" width="256" height="256"></canvas>
-  <div class="planes"></div>
-</section>
+
+  <section>
+    <h2>Points</h2>
+    <div id="sec-points"></div>
+  </section>
+
+  <section>
+    <h2>Between points</h2>
+    <div id="sec-ramp"></div>
+  </section>
+
+  <section>
+    <h2>Planes</h2>
+    <div id="sec-planes"></div>
+  </section>
+
+  <section id="slicePanel" class="hidden">
+    <h2>Cut face <span class="caption"></span></h2>
+    <canvas id="sliceView" width="256" height="256"></canvas>
+  </section>
+</aside>
 
 <div id="readout" class="hidden">
   <span class="chip"></span>

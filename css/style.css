@@ -32,28 +32,43 @@ html, body {
 
 #view:active { cursor: grabbing; }
 
-/* ------------------------------------------------------------------ panel */
+/* ----------------------------------------------------------------- panels
+ *
+ * Display settings on the left, palette on the right, the solid between them.
+ * Each slides out of its own edge independently.
+ */
 
-#panel {
+.panel {
   position: fixed;
   top: 0;
-  left: 0;
   bottom: 0;
-  width: 310px;
+  z-index: 4;
+  width: 312px;
   padding: 16px 16px 24px;
   overflow-y: auto;
   background: color-mix(in srgb, var(--panel) 92%, transparent);
   backdrop-filter: blur(14px);
-  border-right: 1px solid var(--panel-edge);
   transition: transform .18s ease;
   font-size: 12px;
 }
 
-body.panel-hidden #panel { transform: translateX(-100%); }
+#panelLeft {
+  left: 0;
+  border-right: 1px solid var(--panel-edge);
+}
 
-#panel header { margin-bottom: 18px; }
+#panelRight {
+  right: 0;
+  width: 324px;
+  border-left: 1px solid var(--panel-edge);
+}
 
-#panel h1 {
+body.left-hidden #panelLeft { transform: translateX(-100%); }
+body.right-hidden #panelRight { transform: translateX(100%); }
+
+.panel header { margin-bottom: 18px; }
+
+.panel h1 {
   margin: 0;
   font-size: 15px;
   font-weight: 650;
@@ -67,9 +82,12 @@ body.panel-hidden #panel { transform: translateX(-100%); }
   color: var(--ink-dim);
 }
 
-#panel section { margin-bottom: 20px; }
+.panel section { margin-bottom: 20px; }
 
-#panel h2 {
+.panel h2 {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
   margin: 0 0 9px;
   font-size: 10px;
   font-weight: 650;
@@ -80,7 +98,7 @@ body.panel-hidden #panel { transform: translateX(-100%); }
   border-bottom: 1px solid var(--panel-edge);
 }
 
-#panel footer {
+.panel footer {
   color: var(--ink-dim);
   font-size: 11px;
   line-height: 1.55;
@@ -88,8 +106,8 @@ body.panel-hidden #panel { transform: translateX(-100%); }
   padding-top: 10px;
 }
 
-#panel footer p { margin: 0 0 4px; }
-#panel footer b { color: var(--ink); font-weight: 600; }
+.panel footer p { margin: 0 0 4px; }
+.panel footer b { color: var(--ink); font-weight: 600; }
 
 /* ----------------------------------------------------------------- rows */
 
@@ -228,56 +246,29 @@ input[type=color] {
 
 /* ------------------------------------------------------------- overlays */
 
-#panelToggle {
+.edge-toggle {
   position: fixed;
   top: 12px;
-  left: 322px;
   z-index: 5;
   width: 30px;
   height: 30px;
   font-size: 14px;
   color: var(--ink);
   background: color-mix(in srgb, var(--panel) 88%, transparent);
+  backdrop-filter: blur(8px);
   border: 1px solid var(--panel-edge);
   border-radius: var(--radius);
   cursor: pointer;
-  transition: left .18s ease;
+  transition: left .18s ease, right .18s ease;
 }
 
-body.panel-hidden #panelToggle { left: 12px; }
+.edge-toggle:hover { border-color: var(--accent); color: var(--accent); }
 
-/* Tabs ------------------------------------------------------------------ */
+#toggleLeft { left: 324px; }
+#toggleRight { right: 336px; }
 
-.tabs {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 16px;
-  padding: 3px;
-  background: #1c1d24;
-  border: 1px solid var(--panel-edge);
-  border-radius: var(--radius);
-}
-
-.tab {
-  flex: 1;
-  padding: 5px;
-  font: inherit;
-  font-size: 12px;
-  color: var(--ink-dim);
-  background: none;
-  border: 0;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.tab:hover { color: var(--ink); }
-
-.tab.on {
-  color: #fff;
-  background: var(--accent);
-}
-
-.tabpanel.hidden { display: none; }
+body.left-hidden #toggleLeft { left: 12px; }
+body.right-hidden #toggleRight { right: 12px; }
 
 /* Colour picker --------------------------------------------------------- */
 
@@ -416,48 +407,22 @@ body.panel-hidden #panelToggle { left: 12px; }
 
 .planebtn.on .plabel { color: var(--accent); }
 
-/* Cut face panel -------------------------------------------------------- */
-
-#slicePanel {
-  position: fixed;
-  top: 14px;
-  right: 14px;
-  width: 274px;
-  padding: 10px;
-  background: color-mix(in srgb, var(--panel) 92%, transparent);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--panel-edge);
-  border-radius: var(--radius);
-}
+/* Cut face -------------------------------------------------------------- */
 
 #slicePanel.hidden { display: none; }
-
-#slicePanel header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-#slicePanel h3 {
-  margin: 0;
-  font-size: 10px;
-  font-weight: 650;
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  color: var(--ink-dim);
-}
 
 #slicePanel .caption {
   font-family: var(--mono);
   font-size: 10px;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--accent);
 }
 
 #sliceView {
   display: block;
-  width: 254px;
-  height: 254px;
+  width: 100%;
+  height: auto;
   border-radius: 4px;
   background:
     repeating-conic-gradient(#1b1c22 0 25%, #141419 0 50%) 0 0 / 14px 14px;
@@ -534,8 +499,8 @@ body.panel-hidden #panelToggle { left: 12px; }
 
 #ramp {
   position: fixed;
-  left: 326px;
-  right: 14px;
+  left: 328px;
+  right: 340px;
   bottom: 14px;
   padding: 8px;
   background: color-mix(in srgb, var(--panel) 92%, transparent);
@@ -545,8 +510,8 @@ body.panel-hidden #panelToggle { left: 12px; }
   transition: left .18s ease;
 }
 
-body.panel-hidden #ramp { left: 14px; }
-body.slice-open #ramp { right: 302px; }
+body.left-hidden #ramp { left: 14px; }
+body.right-hidden #ramp { right: 14px; }
 #ramp.hidden { display: none; }
 
 #ramp .strip {
@@ -587,10 +552,10 @@ body.slice-open #ramp { right: 302px; }
 
 #ramp .btn { width: auto; padding: 4px 12px; }
 
-/* Kept clear of the cut-face panel on the right. */
+/* Tucked under the left toggle, out of the way of both panels. */
 #readout {
   position: fixed;
-  left: 362px;
+  left: 364px;
   top: 14px;
   display: flex;
   align-items: center;
@@ -617,7 +582,7 @@ body.slice-open #ramp { right: 302px; }
 #readout .hex { font-weight: 600; }
 #readout .coords { color: var(--ink-dim); }
 
-body.panel-hidden #readout { left: 52px; }
+body.left-hidden #readout { left: 52px; }
 
 #toast {
   position: fixed;
@@ -633,7 +598,14 @@ body.panel-hidden #readout { left: 52px; }
   pointer-events: none;
 }
 
-@media (max-width: 720px) {
-  #panel { width: 280px; }
-  #panelToggle { left: 292px; }
+/* Narrow windows: trim the panels a little. Either one can be tucked away with
+ * its own toggle when there is not enough room for both. */
+@media (max-width: 1100px) {
+  .panel, #panelRight { width: 286px; }
+  #toggleLeft { left: 298px; }
+  #toggleRight { right: 298px; }
+  #ramp { left: 302px; right: 302px; }
+  body.left-hidden #ramp { left: 14px; }
+  body.right-hidden #ramp { right: 14px; }
+  #readout { left: 338px; }
 }

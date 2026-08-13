@@ -75,10 +75,12 @@ is color out here your screen cannot reach", which is the honest claim.
 This mode needs a perceptual model — HSV and HSL have no fixed position in CIE
 space, so there is nothing to nest them inside.
 
-## Palette tab
+## Palette
 
-The panel has two tabs. **Display** holds everything about how the solid is
-drawn; **Palette** is where you add colors and build things from them.
+The solid sits in the middle with a panel either side. **Display** on the left
+holds everything about how the solid is drawn; **Palette** on the right is where
+you add colors and build things from them. Each slides out of its own edge —
+`[` and `]`, or the button at its inner corner, and `H` for both at once.
 
 ### Points
 
@@ -117,8 +119,9 @@ Three points define a plane, and that plane cuts the solid open. The **cut face*
 panel shows what the cut exposes — *every* color the plane passes through, not
 just a blend of the three you picked. Those three only choose the angle.
 
-The face is drawn flat beside the 3D view, transparent wherever the plane has
-passed outside the gamut, which is what gives each cut its silhouette. The three
+The face is drawn flat at the foot of the palette panel, transparent wherever
+the plane has passed outside the gamut, which is what gives each cut its
+silhouette. The three
 colors are ringed on it and the triangle they bound is outlined. Turn on **Show
 the cut in 3D** to see the same face embedded in the solid it came from.
 
@@ -188,7 +191,8 @@ typed should never quietly vanish behind a slider.
 | Click | Copy hex |
 | `R` / double-click | Reset view |
 | `Space` | Auto-rotate |
-| `H` | Hide the panel |
+| `[` / `]` | Hide the left / right panel |
+| `H` | Hide both panels |
 
 ## Layout
 

@@ -40,7 +40,6 @@
     slice3DRes: 58,
 
     /* editing */
-    activeTab: 'display',
     selected: -1,
     pickerMode: 'hsv',
 
@@ -653,12 +652,10 @@
 
     if (!plane || !plane.frame) {
       host.classList.add('hidden');
-      document.body.classList.remove('slice-open');
       return;
     }
 
     host.classList.remove('hidden');
-    document.body.classList.add('slice-open');
 
     var cv = document.getElementById('sliceView');
     var ctx = cv.getContext('2d');
@@ -881,8 +878,16 @@
     if (/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
     var k = e.key.toLowerCase();
     if (k === 'r') resetView();
-    else if (k === 'h') document.body.classList.toggle('panel-hidden');
-    else if (e.code === 'Space') { e.preventDefault(); setValue('autoRotate', !state.autoRotate, false); }
+    else if (k === '[') togglePanel('left');
+    else if (k === ']') togglePanel('right');
+    else if (k === 'h') {
+      /* Both at once, for a clean look at the solid. If either is showing,
+       * hide both; otherwise bring both back. */
+      var anyShown = !document.body.classList.contains('left-hidden') ||
+                     !document.body.classList.contains('right-hidden');
+      togglePanel('left', anyShown);
+      togglePanel('right', anyShown);
+    } else if (e.code === 'Space') { e.preventDefault(); setValue('autoRotate', !state.autoRotate, false); }
   });
 
   /* ------------------------------------------------------------ readout */
@@ -958,25 +963,20 @@
 
   /* --------------------------------------------------------------- loop */
 
-  document.getElementById('panelToggle').addEventListener('click', function () {
-    document.body.classList.toggle('panel-hidden');
-  });
-
   document.getElementById('copyRamp').addEventListener('click', copyRamp);
 
-  function setTab(name) {
-    state.activeTab = name;
-    Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (b) {
-      b.classList.toggle('on', b.getAttribute('data-tab') === name);
-    });
-    Array.prototype.forEach.call(document.querySelectorAll('.tabpanel'), function (p) {
-      p.classList.toggle('hidden', p.getAttribute('data-tab') !== name);
-    });
+  /* Each panel slides out of its own edge, leaving the solid in the middle. */
+  function togglePanel(side, force) {
+    var cls = side + '-hidden';
+    document.body.classList.toggle(cls, force);
     dirty = true;
   }
 
-  Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (b) {
-    b.addEventListener('click', function () { setTab(b.getAttribute('data-tab')); });
+  document.getElementById('toggleLeft').addEventListener('click', function () {
+    togglePanel('left');
+  });
+  document.getElementById('toggleRight').addEventListener('click', function () {
+    togglePanel('right');
   });
 
   global.addEventListener('resize', function () { dirty = true; });
@@ -1000,7 +1000,6 @@
   }
 
   buildPanel();
-  setTab('display');
   syncPanel();
   rebuild_();
   fitView();
