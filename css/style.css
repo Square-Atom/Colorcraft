@@ -5,8 +5,36 @@
   --ink-dim: #9a9cab;
   --accent: #6fa8ff;
   --radius: 7px;
+  --scroll-thumb: #31333f;
+  --scroll-thumb-hover: #434554;
   --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mono: ui-monospace, Menlo, Consolas, monospace;
+}
+
+/* Scrollbars, kept in the panel's own palette rather than the browser default,
+ * which sits far too bright against this background. */
+html, .panel {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb) transparent;
+}
+
+.panel::-webkit-scrollbar { width: 11px; }
+
+.panel::-webkit-scrollbar-track,
+.panel::-webkit-scrollbar-corner { background: transparent; }
+
+.panel::-webkit-scrollbar-thumb {
+  /* Transparent border plus padding-box clipping insets the thumb from the
+   * panel edge without needing a second element. */
+  background: var(--scroll-thumb);
+  background-clip: padding-box;
+  border: 3px solid transparent;
+  border-radius: 6px;
+}
+
+.panel::-webkit-scrollbar-thumb:hover {
+  background: var(--scroll-thumb-hover);
+  background-clip: padding-box;
 }
 
 * { box-sizing: border-box; }
