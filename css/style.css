@@ -245,6 +245,21 @@ input[type=color] {
 
 .check input { accent-color: var(--accent); margin: 0; }
 
+.textfield {
+  width: 100%;
+  margin-top: 4px;
+  padding: 5px 7px;
+  font: inherit;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink);
+  background: #202129;
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius);
+}
+
+.textfield:focus { outline: none; border-color: var(--accent); }
+
 .swatches { display: flex; gap: 6px; }
 
 .swatch {
@@ -297,6 +312,36 @@ input[type=color] {
 
 body.left-hidden #toggleLeft { left: 12px; }
 body.right-hidden #toggleRight { right: 12px; }
+
+/* Vertical tabs --------------------------------------------------------- */
+
+.vtabs {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 18px;
+  padding: 3px;
+  background: #1c1d24;
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius);
+}
+
+.vtab {
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  color: var(--ink-dim);
+  background: none;
+  border: 0;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.vtab:hover { color: var(--ink); }
+.vtab.on { color: #fff; background: var(--accent); }
+
+.rtabpanel.hidden { display: none; }
 
 /* Colour picker --------------------------------------------------------- */
 

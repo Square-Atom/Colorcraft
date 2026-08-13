@@ -52,26 +52,36 @@
 </aside>
 
 <aside id="panelRight" class="panel">
-  <header>
-    <h1>Palette</h1>
-  </header>
+  <nav class="vtabs">
+    <button class="vtab" data-rtab="palette">Palette</button>
+    <button class="vtab" data-rtab="export">Export</button>
+  </nav>
 
-  <div id="sec-top"></div>
+  <div class="rtabpanel" data-rtab="palette">
+    <div id="sec-top"></div>
 
-  <section>
-    <h2>Points</h2>
-    <div id="sec-points"></div>
-  </section>
+    <section>
+      <h2>Points</h2>
+      <div id="sec-points"></div>
+    </section>
 
-  <section>
-    <h2>Between points</h2>
-    <div id="sec-ramp"></div>
-  </section>
+    <section>
+      <h2>Between points</h2>
+      <div id="sec-ramp"></div>
+    </section>
 
-  <section>
-    <h2>Planes</h2>
-    <div id="sec-planes"></div>
-  </section>
+    <section>
+      <h2>Planes</h2>
+      <div id="sec-planes"></div>
+    </section>
+  </div>
+
+  <div class="rtabpanel" data-rtab="export">
+    <section>
+      <h2>Planes as PNG</h2>
+      <div id="sec-export"></div>
+    </section>
+  </div>
 </aside>
 
 <!-- Outside both panels on purpose: backdrop-filter makes an ancestor the

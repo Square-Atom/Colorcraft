@@ -139,9 +139,13 @@ effect unless there is a cut to show.
 
 With four or more points, every combination of three becomes its own plane. Five
 points give ten cuts, and the thumbnail grid lets you flip between them — each is
-a genuinely different cross-section. **Export planes as PNG** saves them all to
-one sheet, four to a row, each face at 320px and labelled with the points that
-cut it, carrying the same border as the app draws.
+a genuinely different cross-section.
+
+The **Export** tab saves them all to one sheet, four to a row, each labelled
+with the points that cut it and carrying the same border the app draws. Set the
+file name, and the image scale from ¼× to 4× — a face is 320px at 1×, so four
+planes come out at 1360 × 374, or 5440 × 1496 at full size. The sheet's exact
+dimensions are shown before you save.
 
 Combinations are capped at 40 so a long point list cannot detonate into hundreds
 of rasters. Three collinear points define no plane; that combination is marked
@@ -149,10 +153,8 @@ rather than silently skipped.
 
 ### Ramps between points
 
-**Line** joins the points with a gradient. **Blend fill** takes the older
-approach for three or more: fan the polygon into triangles from its centroid and
-fill each barycentrically, so every corner keeps exactly the color you typed.
-Unlike a plane slice, a blend fill contains only colors mixed from your points.
+The point count decides what happens, so there is nothing to pick: two points
+draw a gradient between them, three or more cut a plane.
 
 ### Blend in
 

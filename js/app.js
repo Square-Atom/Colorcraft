@@ -27,6 +27,8 @@
     /* user colors and the ramp between them */
     anchors: [],
     rampSpace: 'oklab',
+    /* Fixed: two points draw a line between them, three or more cut a plane.
+     * There is no mode to choose -- the point count already decides it. */
     rampMode: 'auto',
     rampSteps: 16,
     rampRes: 10,
@@ -40,6 +42,10 @@
     showOutside: false,
     soloPlane: false,
     slice3DRes: 58,
+
+    /* export */
+    exportName: 'colorcraft-planes',
+    exportScale: 1,
 
     /* editing */
     selected: -1,
@@ -177,15 +183,6 @@
                'them; three cut a plane through the solid.';
       } },
 
-    { sec: 'ramp', type: 'select', key: 'rampMode', label: 'Mode', rebuild: true,
-      when: hasPair,
-      options: [
-        { value: 'auto', label: 'Auto — line, or plane from 3' },
-        { value: 'line', label: 'Line through points' },
-        { value: 'plane', label: 'Plane slice' },
-        { value: 'blend', label: 'Blend fill' },
-        { value: 'none', label: 'Nothing — points only' }
-      ] },
     { sec: 'ramp', type: 'select', key: 'rampSpace', label: 'Blend in', rebuild: true,
       when: function () { return hasLine() || hasBlend(); },
       options: CC.ramp.spaces.map(function (s) { return { value: s.id, label: s.name }; }) },
@@ -212,7 +209,17 @@
     { sec: 'planes', type: 'range', key: 'slice3DRes', label: 'Cut density in 3D',
       min: 16, max: 110, step: 1, rebuild: true,
       when: function () { return hasPlane() && state.sliceIn3D; } },
-    { sec: 'planes', type: 'button', label: 'Export planes as PNG',
+    { sec: 'export', type: 'text', key: 'exportName', label: 'File name',
+      placeholder: 'colorcraft-planes', suffix: '.png' },
+    { sec: 'export', type: 'range', key: 'exportScale', label: 'Image scale',
+      min: 0.25, max: 4, step: 0.25, unit: '×' },
+    { sec: 'export', type: 'note', note: function () {
+        var g = exportGeometry();
+        if (!g.planes.length) return 'Add three points to cut a plane.';
+        return g.planes.length + (g.planes.length === 1 ? ' plane · ' : ' planes · ') +
+               g.width + ' × ' + g.height + ' px, ' + g.cell + 'px per face.';
+      } },
+    { sec: 'export', type: 'button', label: 'Export planes as PNG',
       action: exportPlanes, when: hasPlane },
 
     { sec: 'view', type: 'color', key: 'background', label: 'Background' },
@@ -315,6 +322,26 @@
       row.appendChild(sel);
       sel.addEventListener('change', function () { setValue(def.key, sel.value, def.rebuild); });
       entry.sync = function () { sel.value = state[def.key]; };
+    } else if (def.type === 'text') {
+      var head = el('div', 'head');
+      head.appendChild(el('label', 'lbl', def.label));
+      if (def.suffix) head.appendChild(el('span', 'val', def.suffix));
+      row.appendChild(head);
+
+      var text = document.createElement('input');
+      text.type = 'text';
+      text.spellcheck = false;
+      text.className = 'textfield';
+      if (def.placeholder) text.placeholder = def.placeholder;
+      row.appendChild(text);
+
+      text.addEventListener('input', function () {
+        state[def.key] = text.value;
+      });
+      /* Never written back while focused, or typing would fight the caret. */
+      entry.sync = function () {
+        if (document.activeElement !== text) text.value = state[def.key];
+      };
     } else if (def.type === 'color') {
       row.appendChild(el('label', 'lbl', def.label));
       var col = document.createElement('input');
@@ -710,44 +737,67 @@
   var EXPORT_PAD = 16;
   var EXPORT_LABEL = 22;
 
-  function exportPlanes() {
+  /* Sheet layout at the current scale. Shared with the panel so the size shown
+   * there is the size actually written, not an estimate of it. */
+  function exportGeometry() {
     var planes = state.planes.filter(function (p) { return p.frame; });
-    if (!planes.length) return;
+    var s = state.exportScale;
+    var cell = Math.round(EXPORT_CELL * s);
+    var pad = Math.round(EXPORT_PAD * s);
+    var label = Math.round(EXPORT_LABEL * s);
+    var cols = Math.min(4, Math.max(1, planes.length));
+    var rows = Math.max(1, Math.ceil(planes.length / cols));
 
-    var cols = Math.min(4, planes.length);
-    var rows = Math.ceil(planes.length / cols);
-    var cellH = EXPORT_CELL + EXPORT_LABEL;
+    return {
+      planes: planes, cell: cell, pad: pad, label: label, cols: cols, rows: rows,
+      width: pad + cols * (cell + pad),
+      height: pad + rows * (cell + label + pad)
+    };
+  }
+
+  /* Stripped of anything that would make an invalid or surprising file name,
+   * and given back its extension. */
+  function exportFilename() {
+    var name = String(state.exportName || '').trim()
+      .replace(/[\\/:*?"<>|]+/g, '')
+      .replace(/\.png$/i, '');
+    return (name || 'colorcraft-planes') + '.png';
+  }
+
+  function exportPlanes() {
+    var g = exportGeometry();
+    if (!g.planes.length) return;
 
     var sheet = document.createElement('canvas');
-    sheet.width = EXPORT_PAD + cols * (EXPORT_CELL + EXPORT_PAD);
-    sheet.height = EXPORT_PAD + rows * (cellH + EXPORT_PAD);
+    sheet.width = g.width;
+    sheet.height = g.height;
 
     var ctx = sheet.getContext('2d');
     ctx.fillStyle = '#16171d';
     ctx.fillRect(0, 0, sheet.width, sheet.height);
 
     var face = document.createElement('canvas');
-    face.width = face.height = EXPORT_CELL;
+    face.width = face.height = g.cell;
     var faceCtx = face.getContext('2d');
 
-    planes.forEach(function (p, i) {
-      var ox = EXPORT_PAD + (i % cols) * (EXPORT_CELL + EXPORT_PAD);
-      var oy = EXPORT_PAD + Math.floor(i / cols) * (cellH + EXPORT_PAD);
+    g.planes.forEach(function (p, i) {
+      var ox = g.pad + (i % g.cols) * (g.cell + g.pad);
+      var oy = g.pad + Math.floor(i / g.cols) * (g.cell + g.label + g.pad);
 
-      faceCtx.clearRect(0, 0, EXPORT_CELL, EXPORT_CELL);
+      faceCtx.clearRect(0, 0, g.cell, g.cell);
       faceCtx.putImageData(new ImageData(
-        CC.slice.raster(model, p.frame, EXPORT_CELL, state.sliceClip),
-        EXPORT_CELL, EXPORT_CELL), 0, 0);
+        CC.slice.raster(model, p.frame, g.cell, state.sliceClip), g.cell, g.cell), 0, 0);
 
       ctx.drawImage(face, ox, oy);
-      drawPlaneMarks(ctx, p.frame, ox, oy, EXPORT_CELL);
+      drawPlaneMarks(ctx, p.frame, ox, oy, g.cell);
 
       ctx.fillStyle = '#9a9cab';
-      ctx.font = '600 13px ui-monospace, Menlo, Consolas, monospace';
+      ctx.font = '600 ' + Math.max(9, Math.round(13 * state.exportScale)) +
+        'px ui-monospace, Menlo, Consolas, monospace';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
       ctx.fillText('points ' + p.combo.map(function (n) { return n + 1; }).join(' · '),
-        ox, oy + EXPORT_CELL + 6);
+        ox, oy + g.cell + Math.round(6 * state.exportScale));
     });
 
     sheet.toBlob(function (blob) {
@@ -755,14 +805,14 @@
       var url = URL.createObjectURL(blob);
       var a = document.createElement('a');
       a.href = url;
-      a.download = 'colorcraft-planes-' + model.id + '.png';
+      a.download = exportFilename();
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
 
-      toast.textContent = 'Saved ' + planes.length +
-        (planes.length === 1 ? ' plane' : ' planes');
+      toast.textContent = 'Saved ' + exportFilename() +
+        '  ' + g.width + '×' + g.height;
       toast.classList.remove('hidden');
       clearTimeout(toastTimer);
       toastTimer = setTimeout(function () { toast.classList.add('hidden'); }, 1600);
@@ -1036,6 +1086,20 @@
     dirty = true;
   }
 
+  function setRightTab(name) {
+    Array.prototype.forEach.call(document.querySelectorAll('.vtab'), function (b) {
+      b.classList.toggle('on', b.getAttribute('data-rtab') === name);
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('.rtabpanel'), function (p) {
+      p.classList.toggle('hidden', p.getAttribute('data-rtab') !== name);
+    });
+    syncPanel();
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('.vtab'), function (b) {
+    b.addEventListener('click', function () { setRightTab(b.getAttribute('data-rtab')); });
+  });
+
   document.getElementById('toggleLeft').addEventListener('click', function () {
     togglePanel('left');
   });
@@ -1064,6 +1128,7 @@
   }
 
   buildPanel();
+  setRightTab('palette');
   syncPanel();
   rebuild_();
   fitView();
