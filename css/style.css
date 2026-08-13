@@ -450,9 +450,40 @@ body.right-hidden #toggleRight { right: 12px; }
 
 #sec-top .check:hover { border-color: var(--accent); }
 
-/* Cut face -------------------------------------------------------------- */
+/* Cut face -----------------------------------------------------------------
+ *
+ * A small window pinned to the palette's bottom-left corner rather than a
+ * section in the flow, so the cut stays in view while the panel is scrolled.
+ * Its right offset is the panel width less its padding and this window's own
+ * width, which is why it changes with the panel at the breakpoint below.
+ */
 
-#slicePanel.hidden { display: none; }
+#slicePanel {
+  position: fixed;
+  z-index: 5;
+  bottom: 14px;
+  right: 138px;
+  width: 170px;
+  /* Overrides the section margin it would otherwise inherit, which offsets a
+   * fixed box from the edge it is anchored to. */
+  margin: 0;
+  padding: 8px;
+  background: color-mix(in srgb, var(--panel) 96%, transparent);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .45);
+  transition: right .18s ease;
+}
+
+#slicePanel.hidden,
+body.right-hidden #slicePanel { display: none; }
+
+#slicePanel h2 {
+  margin: 0 0 6px;
+  padding: 0;
+  border: 0;
+}
 
 #slicePanel .caption {
   font-family: var(--mono);
@@ -468,7 +499,7 @@ body.right-hidden #toggleRight { right: 12px; }
   height: auto;
   border-radius: 4px;
   background:
-    repeating-conic-gradient(#1b1c22 0 25%, #141419 0 50%) 0 0 / 14px 14px;
+    repeating-conic-gradient(#1b1c22 0 25%, #141419 0 50%) 0 0 / 10px 10px;
 }
 
 .anchors { display: flex; flex-direction: column; gap: 5px; }
@@ -651,4 +682,5 @@ body.left-hidden #readout { left: 52px; }
   body.left-hidden #ramp { left: 14px; }
   body.right-hidden #ramp { right: 14px; }
   #readout { left: 338px; }
+  #slicePanel { right: 100px; }
 }

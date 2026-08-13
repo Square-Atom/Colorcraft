@@ -120,10 +120,10 @@ panel shows what the cut exposes — *every* color the plane passes through, not
 just a blend of the three you picked. Those three only choose the angle.
 
 By default the face is bounded by the triangle its three points make — they set
-the border as well as the angle. It is drawn flat at the foot of the palette
-panel, with the three colors ringed and the border outlined. **Show the cut in
-3D**, the toggle at the top of the palette, puts the same face back inside the
-solid it came from.
+the border as well as the angle. It shows in a small window pinned to the
+bottom-left of the palette, which stays put while the panel scrolls, with the
+three colors ringed and the border outlined. **Show the cut in 3D**, the toggle
+at the top of the palette, puts the same face back inside the solid it came from.
 
 **Show color outside the border** lets the cut run past the triangle to the edge
 of the gamut, so you get the whole cross-section rather than only the part the
