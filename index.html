@@ -11,7 +11,6 @@
 <canvas id="view"></canvas>
 
 <button id="toggleLeft" class="edge-toggle" title="Display settings ( [ )">☰</button>
-<button id="toggleRight" class="edge-toggle" title="Palette ( ] )">☰</button>
 
 <aside id="panelLeft" class="panel">
   <header>
@@ -48,13 +47,14 @@
     <p><b>Drag</b> rotate · <b>Shift/right-drag</b> pan · <b>Wheel</b> zoom</p>
     <p><b>Click</b> a point to copy its hex · <b>R</b> reset · <b>Space</b> spin</p>
     <p><b>[</b> and <b>]</b> hide the panels · <b>H</b> hides both</p>
+    <p>Clicking the palette's current tab hides it too</p>
   </footer>
 </aside>
 
 <!-- Outside the panel for the same reason as the cut face: backdrop-filter on
      an ancestor would make it the containing block for fixed children. -->
 <nav class="vtabs">
-  <button class="vtab" data-rtab="palette" title="Palette">
+  <button class="vtab" data-rtab="palette" title="Palette — click again to hide">
     <svg viewBox="0 0 20 20" width="18" height="18" fill="none"
          stroke="currentColor" stroke-width="1.5" aria-hidden="true">
       <circle cx="10" cy="10" r="7.2"/>
@@ -64,7 +64,7 @@
       <circle cx="12.9" cy="12.7" r="1.15" fill="currentColor" stroke="none"/>
     </svg>
   </button>
-  <button class="vtab" data-rtab="export" title="Export">
+  <button class="vtab" data-rtab="export" title="Export — click again to hide">
     <svg viewBox="0 0 20 20" width="18" height="18" fill="none"
          stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
          stroke-linejoin="round" aria-hidden="true">

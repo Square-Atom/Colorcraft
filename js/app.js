@@ -1086,25 +1086,38 @@
     dirty = true;
   }
 
-  function setRightTab(name) {
+  var rightTab = 'palette';
+
+  function applyRightTab() {
     Array.prototype.forEach.call(document.querySelectorAll('.vtab'), function (b) {
-      b.classList.toggle('on', b.getAttribute('data-rtab') === name);
+      b.classList.toggle('on', b.getAttribute('data-rtab') === rightTab);
     });
     Array.prototype.forEach.call(document.querySelectorAll('.rtabpanel'), function (p) {
-      p.classList.toggle('hidden', p.getAttribute('data-rtab') !== name);
+      p.classList.toggle('hidden', p.getAttribute('data-rtab') !== rightTab);
     });
     syncPanel();
   }
 
+  /* The tabs double as the panel's own toggle: clicking the one already showing
+   * folds the panel away, so no separate hide button is needed. */
+  function clickRightTab(name) {
+    var hidden = document.body.classList.contains('right-hidden');
+
+    if (!hidden && name === rightTab) {
+      togglePanel('right', true);
+      return;
+    }
+    rightTab = name;
+    togglePanel('right', false);
+    applyRightTab();
+  }
+
   Array.prototype.forEach.call(document.querySelectorAll('.vtab'), function (b) {
-    b.addEventListener('click', function () { setRightTab(b.getAttribute('data-rtab')); });
+    b.addEventListener('click', function () { clickRightTab(b.getAttribute('data-rtab')); });
   });
 
   document.getElementById('toggleLeft').addEventListener('click', function () {
     togglePanel('left');
-  });
-  document.getElementById('toggleRight').addEventListener('click', function () {
-    togglePanel('right');
   });
 
   global.addEventListener('resize', function () { dirty = true; });
@@ -1128,7 +1141,7 @@
   }
 
   buildPanel();
-  setRightTab('palette');
+  applyRightTab();
   syncPanel();
   rebuild_();
   fitView();

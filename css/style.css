@@ -310,10 +310,7 @@ input[type=color] {
 .edge-toggle:hover { border-color: var(--accent); color: var(--accent); }
 
 #toggleLeft { left: 324px; }
-#toggleRight { right: 336px; }
-
 body.left-hidden #toggleLeft { left: 12px; }
-body.right-hidden #toggleRight { right: 12px; }
 
 /* Vertical tab rail ---------------------------------------------------------
  *
@@ -325,21 +322,21 @@ body.right-hidden #toggleRight { right: 12px; }
 .vtabs {
   position: fixed;
   z-index: 5;
-  top: 0;
-  bottom: 0;
+  top: 12px;
   right: 286px;            /* panel width less the rail's own width */
-  width: 38px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 14px 4px;
-  background: color-mix(in srgb, var(--panel) 92%, transparent);
-  backdrop-filter: blur(14px);
-  border-right: 1px solid var(--panel-edge);
+  gap: 3px;
+  padding: 3px;
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius);
   transition: right .18s ease;
 }
 
-body.right-hidden .vtabs { display: none; }
+/* Stays reachable when the palette is folded away -- it is the only way back. */
+body.right-hidden .vtabs { right: 12px; }
 
 .vtab {
   display: flex;
@@ -759,7 +756,6 @@ body.left-hidden #readout { left: 52px; }
   .panel, #panelRight { width: 286px; }
   .vtabs { right: 248px; }
   #toggleLeft { left: 298px; }
-  #toggleRight { right: 298px; }
   #ramp { left: 302px; right: 302px; }
   body.left-hidden #ramp { left: 14px; }
   body.right-hidden #ramp { right: 14px; }
