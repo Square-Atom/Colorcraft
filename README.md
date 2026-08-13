@@ -1,26 +1,36 @@
 # Colorcraft
 
-An interactive 3D view of color space. Hue runs around the circle, chroma runs
-outward from a neutral core, and lightness runs bottom to top — black at the
-floor, white at the ceiling.
+An interactive 3D view of color space, and a palette tool built on top of it.
+No build step, no dependencies, no server — open `index.html` and it runs.
 
-The point of the thing is the shape. In a perceptual model, each hue reaches its
-most saturated form at a *different* height: yellow peaks near the top, blue near
-the bottom, red somewhere in between. So the solid is a lopsided blob rather than
-a tidy cylinder — which is what real color actually looks like.
+<!--
+  A screenshot belongs here and makes a big difference on GitHub.
+  Save one as docs/screenshot.png and uncomment:
+
+  ![Colorcraft](docs/screenshot.png)
+-->
+
+Hue runs around the circle, chroma outward from a neutral core, lightness bottom
+to top — black at the floor, white at the ceiling.
+
+The point of it is the **shape**. In a perceptual model each hue reaches its most
+saturated form at a *different* height: yellow peaks near the top, blue near the
+bottom, red somewhere in between. So the solid comes out a lopsided blob rather
+than a tidy cylinder. That lopsidedness is what color actually looks like, and
+it is exactly what HSV flattens away.
 
 ## Running it
 
-Open `index.html`. That's it — no build step, no dependencies, no server. The
-scripts are plain classic scripts specifically so `file://` works.
+Clone it and open `index.html`. That's the whole procedure — the scripts are
+plain classic scripts specifically so `file://` works.
 
-If you'd rather serve it:
+If you'd rather serve it, `serve.py` is a small no-cache static server:
 
 ```bash
-python -m http.server 5580
+python serve.py 5580
 ```
 
-## Models
+## Color models
 
 | Model | Shape |
 | --- | --- |
@@ -29,9 +39,28 @@ python -m http.server 5580
 | **HSV** | A flat cylinder — every hue forced to the same level. |
 | **HSL** | A bicone. Tapers correctly to black and white, still ignores real brightness. |
 
-Switch between Oklch and HSV to see the difference the perceptual model makes:
-HSV puts pure yellow and pure blue at exactly the same height, which is why it
-looks so even and reads so poorly as a picture of brightness.
+Switch between Oklch and HSV to see what the perceptual model buys you: HSV puts
+pure yellow and pure blue at exactly the same height, which is why it looks so
+even and reads so poorly as a picture of brightness.
+
+## Sampling
+
+Three ways to populate the same space.
+
+**Hue / lightness lattice** walks the model's own coordinates and asks what color
+sits at each position. Even rings and spokes; a diagram of the model.
+
+**sRGB cube** walks the display's colors instead and asks where each one lands.
+Every point is displayable by construction, and the clumping is real information
+— it shows how unevenly RGB is spread through perceptual space.
+
+**sRGB inside a wider gamut** draws sRGB in full color wrapped in a greyed shell
+marking a larger space: Display P3, Adobe RGB (1998), Rec. 2020, or the raw LCh
+coordinate cylinder.
+
+The envelope is deliberately neutral rather than colored. Those are by definition
+colors sRGB cannot show, so painting them in sRGB would be a lie; grey says
+"there is color out here your screen cannot reach", which is the honest claim.
 
 ## Seeing inside a dense solid
 
@@ -44,50 +73,22 @@ The cloud gets thick fast, so several controls exist purely to open it up:
 - **Depth fade** — fade distant points toward the background for depth
 - **Radial spread**, **Vertical spread** — stretch the geometry so points separate
 
-Density is controlled by **Hue steps**, **Lightness levels** and **Chroma rings**.
-
 **Rings ride the gamut edge** decides how chroma is sampled. When on, the outer
-ring always sits exactly on the most saturated color available at that lightness,
-so the silhouette traces the true gamut. When off, rings are spaced at uniform
-absolute chroma and simply stop where they run out of gamut — a ragged edge, but
-an honest sense of how much chroma each hue really has.
-
-## Sampling
-
-Three ways to populate the same space.
-
-**Hue / lightness lattice** walks the model's own coordinates and asks what color
-sits at each position. Even rings and spokes; a diagram of the model.
-
-**sRGB cube** walks the display's colors instead and asks where each one lands.
-Every point is displayable by construction, and the clumping is real information —
-it shows how unevenly RGB is spread through perceptual space.
-
-**sRGB inside a wider gamut** draws sRGB in full color wrapped in a greyed shell
-marking a larger space: Display P3, Adobe RGB (1998), Rec. 2020, or the raw LCh
-coordinate cylinder. Turn on *Outer shell only* and add a cutaway wedge to see
-how much room is left between them.
-
-The envelope is deliberately neutral rather than colored. Those are by definition
-colors sRGB cannot show, so painting them in sRGB would be a lie; grey says "there
-is color out here your screen cannot reach", which is the honest claim.
-
-This mode needs a perceptual model — HSV and HSL have no fixed position in CIE
-space, so there is nothing to nest them inside.
+ring sits exactly on the most saturated color available at that lightness, so the
+silhouette traces the true gamut. When off, rings are spaced at uniform absolute
+chroma and stop where they run out of gamut — a ragged edge, but an honest sense
+of how much chroma each hue really has.
 
 ## Palette
 
-The solid sits in the middle with a panel either side. **Display** on the left
-holds everything about how the solid is drawn; **Palette** on the right is where
-you add colors and build things from them. Each slides out of its own edge —
-`[` and `]`, or the button at its inner corner, and `H` for both at once.
+The solid sits in the middle with a panel either side: **Display** on the left for
+how the solid is drawn, **Palette** on the right for building things from it.
 
 ### Points
 
-Add a point first, then colour it. **+ Add point** creates one and selects it;
-the selected point's editor unfolds inside its row, and everything else stays
-collapsed. Click any point to select it — its own sliders come back exactly
-where you left them.
+Add a point first, then color it. The selected point's editor unfolds inside its
+row and everything else stays collapsed; click any point to bring its own sliders
+back exactly where you left them.
 
 The editor has an HSV/RGB toggle, three sliders whose tracks preview what moving
 that one slider would do, and a text field:
@@ -98,69 +99,18 @@ that one slider would do, and a text field:
 
 Bare triples are read as 0–255 unless they look normalised (`0.5 0.2 0.9`).
 
-A new point starts from the colour of the selected one, so building a set of
-related colours means adding and nudging rather than retyping.
-
 In the 3D view every point is a circle, and the border says which is selected:
-**white for the selected point, black for the rest**. Points always draw over
-the solid rather than being sorted into it, so a colour deep in the interior is
-still visible — they are still depth ordered against each other, so where two
-overlap the nearer one lands on top.
+**white for the selected point, black for the rest**. Points always draw over the
+solid, so a color deep in the interior is still visible.
 
-Points are numbered, and the plane list refers to them by those numbers.
+### Ramps
 
-Each point keeps its own HSV alongside its RGB rather than deriving it on
-demand. Hue is undefined for greys and blacks, so storing it is what stops the
-hue slider snapping to zero every time saturation or value bottoms out.
+Two points draw a gradient between them; three or more cut a plane. The point
+count decides, so there is nothing to pick.
 
-### Plane slices
-
-Three points define a plane, and that plane cuts the solid open. The **cut face**
-panel shows what the cut exposes — *every* color the plane passes through, not
-just a blend of the three you picked. Those three only choose the angle.
-
-By default the face is bounded by the triangle its three points make — they set
-the border as well as the angle. It shows in a small resizable window floating
-over the view, between the two panels, with the border drawn as a thin white
-outline. **Show the cut in 3D**, the toggle at the top of the palette, puts the
-same face back inside the solid it came from.
-
-**Show color outside the border** lets the cut run past the triangle to the edge
-of the gamut, so you get the whole cross-section rather than only the part the
-points bound. The border stays outlined either way, so it is clear what is being
-added. It applies to the thumbnails and the 3D cut too, not just the flat view.
-Out there the face is transparent wherever the plane has left the gamut, which is
-what gives each cut its silhouette.
-
-**Hide color outside the plane** drops the solid entirely, leaving the cut alone
-in space. The axis and equator stay, so it keeps its bearings — rotate to see the
-plane edge on. This one is render-only, so it toggles instantly, and it has no
-effect unless there is a cut to show.
-
-With four or more points, every combination of three becomes its own plane. Five
-points give ten cuts, and the thumbnail grid lets you flip between them — each is
-a genuinely different cross-section.
-
-The **Export** tab saves them all to one sheet, four to a row, each labelled
-with the points that cut it and carrying the same border the app draws. Set the
-file name, and the image scale from ¼× to 4× — a face is 320px at 1×, so four
-planes come out at 1360 × 374, or 5440 × 1496 at full size. The sheet's exact
-dimensions are shown before you save.
-
-Combinations are capped at 40 so a long point list cannot detonate into hundreds
-of rasters. Three collinear points define no plane; that combination is marked
-rather than silently skipped.
-
-### Ramps between points
-
-The point count decides what happens, so there is nothing to pick: two points
-draw a gradient between them, three or more cut a plane.
-
-### Blend in
-
-This is the control worth playing with. A gradient has no single correct path —
-it depends entirely on which space you average in, and the difference is large.
-Blue `#0033ff` to yellow `#ffdd00`, same endpoints every time:
+**Blend in** is the control worth playing with. A gradient has no single correct
+path — it depends entirely on which space you average in, and the difference is
+large. Blue `#0033ff` to yellow `#ffdd00`, same endpoints every time:
 
 | Blend space | Midpoint | |
 | --- | --- | --- |
@@ -171,20 +121,33 @@ Blue `#0033ff` to yellow `#ffdd00`, same endpoints every time:
 | Linear RGB | `#bca5bc` | physically correct light mixing |
 | sRGB — naive | `#808880` | the muddy grey midpoint everyone complains about |
 
-Watching those six paths take visibly different routes between the same two
-points is the clearest explanation of why gradient code cares about color space.
+Watching six paths take visibly different routes between the same two points is
+the clearest explanation of why gradient code cares about color space.
 
 Polar arcs keep chroma high through the middle, which is usually what you want
 from a ramp — but it also pushes the path outside sRGB. Those colors are clamped
-back in and marked with a dashed ring in the view and a dashed cap in the swatch
-strip, so you can see exactly where the ramp left the gamut.
+back in and marked with a dashed ring, so you can see where the ramp left the
+gamut. Generated ramps appear as a swatch strip; click a swatch to copy its hex,
+or **Copy all** for the whole list.
 
-Generated ramps appear as a swatch strip along the bottom. Click any swatch to
-copy its hex, or **Copy all** for the whole list. Long fills are subsampled for
-display; copy still gives you everything.
+### Plane slices
 
-User points and their ramps ignore the slice and filter sliders — a color you
-typed should never quietly vanish behind a slider.
+Three points define a plane, and that plane cuts the solid open. The **cut face**
+shows *every* color the cut passes through — not just a blend of the three you
+picked. Those three only choose the angle.
+
+By default the face is bounded by the triangle its points make; **Show color
+outside the border** lets it run out to the gamut edge instead. **Show the cut in
+3D** puts the same face back inside the solid it came from, and **Hide color
+outside the plane** drops the solid entirely, leaving the cut alone in space.
+
+With four or more points, every combination of three becomes its own plane — five
+points give ten distinct cross-sections, picked from a thumbnail grid.
+
+The **Export** tab saves them all to one PNG sheet, four to a row, each labelled
+with the points that cut it. Set the file name and a scale from ¼× to 4×; a face
+is 320px at 1×, so four planes come out at 1360 × 374, or 5440 × 1496 at full
+size. The exact dimensions are shown before you save.
 
 ## Controls
 
@@ -200,6 +163,77 @@ typed should never quietly vanish behind a slider.
 | `[` / `]` | Hide the left / right panel |
 | `H` | Hide both panels |
 
+Clicking the palette's current tab hides it too.
+
+## Embedding
+
+Which panels start open can be set from the URL, which is what makes the page
+usable in a frame far narrower than a window:
+
+| URL | Result |
+| --- | --- |
+| `index.html` | Both panels open |
+| `index.html?panels=left` | Display panel only |
+| `index.html?panels=right` | Palette only |
+| `index.html?panels=none` | Just the solid — a clean showcase |
+
+Either panel is still one click away from its button, so nothing is lost.
+
+### Publishing with GitHub Pages
+
+The repo is already a static site with `index.html` at the root, so no build or
+config is needed:
+
+1. Push to GitHub
+2. **Settings → Pages → Source: Deploy from a branch**
+3. Pick your branch and **/ (root)**, then save
+
+It lands at `https://<user>.github.io/<repo>/` within a minute or two.
+
+### Embedding in Wix
+
+With the site live on Pages, in the Wix editor choose **Add → Embed Code →
+Embed a Site** and point it at your Pages URL. Make the element as wide and tall
+as the section allows — the two panels are 636px combined, so a narrow embed is
+worth pairing with `?panels=left` or `?panels=none`.
+
+Because the panels can be reopened from their buttons, `?panels=none` is usually
+the best default for a page embed: visitors get the solid, and the controls are
+there if they want them.
+
+Worth adding an **Open full screen** link next to the embed, pointing at the same
+URL without parameters. Casual visitors get something to play with in-page, and
+anyone interested gets the real thing with room to work.
+
+Nothing here phones home — it is all client-side canvas, with no external
+requests, so there is no CSP or privacy wrinkle to work around.
+
+## How it works
+
+Rendering is Canvas 2D rather than WebGL. Back-to-front alpha blending is what
+makes the interior readable, and that needs a depth sort either way; the sort is
+a counting sort into depth buckets, so it stays linear as density climbs. Points
+carry prebuilt color strings so the common full-opacity path does no per-frame
+string formatting.
+
+The gamut boundary is found by bisection on chroma. Any RGB gamut is star-shaped
+about the neutral axis in both Oklab and CIELAB, so in-gamut is a single
+contiguous interval and a plain binary search is safe.
+
+Gamuts are defined by their published CIE xy chromaticities, with the XYZ
+matrices derived from those at load time rather than transcribed. Deriving beats
+copying: the matrices are long strings of digits that are easy to get subtly
+wrong, and adding a gamut becomes eight numbers you can check against a spec. The
+derived sRGB matrix agrees with the published one to six decimal places.
+
+Only primaries matter for that — a gamut's volume is fixed by its primaries and
+white point, and the transfer curve only affects encoding within it. Every gamut
+test happens in linear light, so no transfer function is involved.
+
+Plane geometry lives in unscaled model space, so the spread sliders cannot change
+which colors a cut passes through. Scaling is linear, so a cut stays planar once
+the renderer applies it.
+
 ## Layout
 
 ```
@@ -209,7 +243,7 @@ js/color.js       sRGB, Oklab, CIELAB, XYZ, HSV, HSL conversions
 js/gamuts.js      RGB working spaces, matrices derived from chromaticities
 js/models.js      the four solids behind one generic interface
 js/cloud.js       point cloud construction
-js/ramp.js        color parsing, blend spaces, gradients and blend fills
+js/ramp.js        color parsing, blend spaces, gradients
 js/slice.js       plane geometry and cross-section rasters
 js/renderer.js    orbit camera, painter's algorithm, picking
 js/app.js         controls, input, frame loop
@@ -222,25 +256,3 @@ dependencies, so it ports to C, GLSL, or anything else more or less mechanically
 `js/models.js` is where the geometry lives. Every model exposes the same three
 operations — `toRGB`, `fromRGB`, `maxC` — so the cloud builder and renderer never
 branch on which model is active. Adding a fifth model means adding one object.
-
-## Notes
-
-Rendering is Canvas 2D rather than WebGL. Back-to-front alpha blending is what
-makes the interior readable, and that needs a depth sort either way; the sort is
-a counting sort into depth buckets, so it stays linear as density climbs. Points
-carry prebuilt color strings so the common full-opacity path does no per-frame
-string formatting.
-
-The gamut boundary is found by bisection on chroma. Any RGB gamut is star-shaped
-about the neutral axis in both Oklab and CIELAB, so in-gamut is a single
-contiguous interval and a plain binary search is safe.
-
-Gamuts are defined by their published CIE xy chromaticities, and the XYZ matrices
-are derived from those at load time rather than transcribed. Deriving beats
-copying: the matrices are long strings of digits that are easy to get subtly
-wrong, and adding a gamut becomes eight numbers you can check against a spec. The
-derived sRGB matrix agrees with the published one to six decimal places.
-
-Only primaries matter for this, incidentally — a gamut's volume is fixed by its
-primaries and white point, and the transfer curve only affects encoding within it.
-Every gamut test happens in linear light, so no transfer function is involved.

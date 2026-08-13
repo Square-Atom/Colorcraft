@@ -1152,6 +1152,19 @@
     requestAnimationFrame(frame);
   }
 
+  /* Which panels start open can be set from the URL. An embed is usually far
+   * narrower than a window, and 636px of panels leaves little of the solid
+   * between them, so a page embedding this can fold one or both away up front:
+   *
+   *   ?panels=both (default) | left | right | none
+   */
+  (function () {
+    var m = /[?&]panels=(both|left|right|none)/.exec(global.location.search);
+    var want = m ? m[1] : 'both';
+    if (want === 'right' || want === 'none') document.body.classList.add('left-hidden');
+    if (want === 'left' || want === 'none') document.body.classList.add('right-hidden');
+  })();
+
   buildPanel();
   applyRightTab();
   syncPanel();
