@@ -88,6 +88,8 @@ html, body {
 #panelRight {
   right: 0;
   width: 324px;
+  /* Left padding clears the tab rail that overlays this edge. */
+  padding-left: 54px;
   border-left: 1px solid var(--panel-edge);
 }
 
@@ -313,32 +315,47 @@ input[type=color] {
 body.left-hidden #toggleLeft { left: 12px; }
 body.right-hidden #toggleRight { right: 12px; }
 
-/* Vertical tabs --------------------------------------------------------- */
+/* Vertical tab rail ---------------------------------------------------------
+ *
+ * A strip of icons down the palette's inner edge. Sitting on the edge rather
+ * than above the content costs no vertical space, and icons cost no horizontal
+ * space either -- names live in the tooltips instead.
+ */
 
 .vtabs {
+  position: fixed;
+  z-index: 5;
+  top: 0;
+  bottom: 0;
+  right: 286px;            /* panel width less the rail's own width */
+  width: 38px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  margin-bottom: 18px;
-  padding: 3px;
-  background: #1c1d24;
-  border: 1px solid var(--panel-edge);
-  border-radius: var(--radius);
+  gap: 4px;
+  padding: 14px 4px;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  backdrop-filter: blur(14px);
+  border-right: 1px solid var(--panel-edge);
+  transition: right .18s ease;
 }
 
+body.right-hidden .vtabs { display: none; }
+
 .vtab {
-  padding: 7px 10px;
-  font: inherit;
-  font-size: 12px;
-  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
   color: var(--ink-dim);
   background: none;
   border: 0;
-  border-radius: 5px;
+  border-radius: 6px;
   cursor: pointer;
 }
 
-.vtab:hover { color: var(--ink); }
+.vtab:hover { color: var(--ink); background: #24252e; }
 .vtab.on { color: #fff; background: var(--accent); }
 
 .rtabpanel.hidden { display: none; }
@@ -740,6 +757,7 @@ body.left-hidden #readout { left: 52px; }
  * its own toggle when there is not enough room for both. */
 @media (max-width: 1100px) {
   .panel, #panelRight { width: 286px; }
+  .vtabs { right: 248px; }
   #toggleLeft { left: 298px; }
   #toggleRight { right: 298px; }
   #ramp { left: 302px; right: 302px; }
