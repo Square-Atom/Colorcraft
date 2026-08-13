@@ -4,7 +4,7 @@
     {
       "name": "colorcraft",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "5580"],
+      "runtimeArgs": ["serve.py", "5580"],
       "port": 5580
     }
   ]
