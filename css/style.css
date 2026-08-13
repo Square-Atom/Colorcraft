@@ -88,8 +88,6 @@ html, body {
 #panelRight {
   right: 0;
   width: 324px;
-  /* Left padding clears the tab rail that overlays this edge. */
-  padding-left: 54px;
   border-left: 1px solid var(--panel-edge);
 }
 
@@ -323,22 +321,22 @@ body.left-hidden #toggleLeft { left: 12px; }
 
 /* Vertical tab rail ---------------------------------------------------------
  *
- * A strip of icons down the palette's inner edge. Sitting on the edge rather
- * than above the content costs no vertical space, and icons cost no horizontal
- * space either -- names live in the tooltips instead.
+ * Sits just outside the palette, over the view, mirroring the display panel's
+ * toggle on the other edge. Icons rather than words, with the names in the
+ * tooltips, so it costs no panel width at all.
  */
 
 .vtabs {
   position: fixed;
   z-index: 5;
   top: 12px;
-  right: 286px;            /* panel width less the rail's own width */
+  right: 336px;            /* panel width plus the same gap the left toggle uses */
   display: flex;
   flex-direction: column;
   gap: 3px;
   padding: 3px;
   background: color-mix(in srgb, var(--panel) 88%, transparent);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(8px);
   border: 1px solid var(--panel-edge);
   border-radius: var(--radius);
   transition: right .18s ease;
@@ -763,7 +761,7 @@ body.left-hidden #readout { left: 52px; }
  * its own toggle when there is not enough room for both. */
 @media (max-width: 1100px) {
   .panel, #panelRight { width: 286px; }
-  .vtabs { right: 248px; }
+  .vtabs { right: 298px; }
   #toggleLeft { left: 298px; }
   #ramp { left: 302px; right: 302px; }
   body.left-hidden #ramp { left: 14px; }
