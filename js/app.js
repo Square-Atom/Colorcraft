@@ -212,6 +212,8 @@
     { sec: 'planes', type: 'range', key: 'slice3DRes', label: 'Cut density in 3D',
       min: 16, max: 110, step: 1, rebuild: true,
       when: function () { return hasPlane() && state.sliceIn3D; } },
+    { sec: 'planes', type: 'button', label: 'Export planes as PNG',
+      action: exportPlanes, when: hasPlane },
 
     { sec: 'view', type: 'color', key: 'background', label: 'Background' },
     { sec: 'view', type: 'presets', key: 'background',
@@ -667,26 +669,35 @@
       CC.slice.raster(model, plane.frame, SLICE_SIZE, state.sliceClip),
       SLICE_SIZE, SLICE_SIZE), 0, 0);
 
+    drawPlaneMarks(ctx, plane.frame, 0, 0, SLICE_SIZE);
+
+    host.querySelector('.caption').textContent =
+      'points ' + plane.combo.map(function (i) { return i + 1; }).join(' · ');
+  }
+
+  /* The border and the three rings, over a cut face already drawn at (ox, oy).
+   * Shared by the on-screen window and the export, so a saved sheet carries the
+   * same marks as the app. Sizes scale with the face so it holds up when the
+   * export renders larger than the window. */
+  function drawPlaneMarks(ctx, frame, ox, oy, size) {
     var R = CC.slice.RADIUS;
-    var toPixel = function (uv) {
-      return [((uv[0] / R) + 1) / 2 * (SLICE_SIZE - 1),
-              ((-uv[1] / R) + 1) / 2 * (SLICE_SIZE - 1)];
-    };
+
+    var pix = frame.points.map(function (p) {
+      var uv = CC.slice.uvOf(frame, p);
+      return [ox + ((uv[0] / R) + 1) / 2 * (size - 1),
+              oy + ((-uv[1] / R) + 1) / 2 * (size - 1)];
+    });
 
     /* Stroked twice, dark then light, so the marks stay legible whatever colour
      * they land on. */
     var outline = function (alpha) {
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = size / 102;
       ctx.strokeStyle = 'rgba(0,0,0,' + alpha * 0.6 + ')';
       ctx.stroke();
-      ctx.lineWidth = 1;
+      ctx.lineWidth = size / 256;
       ctx.strokeStyle = 'rgba(255,255,255,' + alpha + ')';
       ctx.stroke();
     };
-
-    var pix = plane.frame.points.map(function (p) {
-      return toPixel(CC.slice.uvOf(plane.frame, p));
-    });
 
     /* The border the three points make, drawn whether or not it is clipping, so
      * you can see what turning the option on would cut away. */
@@ -701,12 +712,75 @@
      * on a face that is mostly other colours. */
     pix.forEach(function (p) {
       ctx.beginPath();
-      ctx.arc(p[0], p[1], 5, 0, Math.PI * 2);
+      ctx.arc(p[0], p[1], size / 51, 0, Math.PI * 2);
       outline(0.9);
     });
+  }
 
-    host.querySelector('.caption').textContent =
-      'points ' + plane.combo.map(function (i) { return i + 1; }).join(' · ');
+  /* Every plane on one sheet, each labelled with the points that cut it. One
+   * image rather than one file per plane: five points already make ten cuts,
+   * and they are only useful next to each other. */
+  var EXPORT_CELL = 320;
+  var EXPORT_PAD = 16;
+  var EXPORT_LABEL = 22;
+
+  function exportPlanes() {
+    var planes = state.planes.filter(function (p) { return p.frame; });
+    if (!planes.length) return;
+
+    var cols = Math.min(4, planes.length);
+    var rows = Math.ceil(planes.length / cols);
+    var cellH = EXPORT_CELL + EXPORT_LABEL;
+
+    var sheet = document.createElement('canvas');
+    sheet.width = EXPORT_PAD + cols * (EXPORT_CELL + EXPORT_PAD);
+    sheet.height = EXPORT_PAD + rows * (cellH + EXPORT_PAD);
+
+    var ctx = sheet.getContext('2d');
+    ctx.fillStyle = '#16171d';
+    ctx.fillRect(0, 0, sheet.width, sheet.height);
+
+    var face = document.createElement('canvas');
+    face.width = face.height = EXPORT_CELL;
+    var faceCtx = face.getContext('2d');
+
+    planes.forEach(function (p, i) {
+      var ox = EXPORT_PAD + (i % cols) * (EXPORT_CELL + EXPORT_PAD);
+      var oy = EXPORT_PAD + Math.floor(i / cols) * (cellH + EXPORT_PAD);
+
+      faceCtx.clearRect(0, 0, EXPORT_CELL, EXPORT_CELL);
+      faceCtx.putImageData(new ImageData(
+        CC.slice.raster(model, p.frame, EXPORT_CELL, state.sliceClip),
+        EXPORT_CELL, EXPORT_CELL), 0, 0);
+
+      ctx.drawImage(face, ox, oy);
+      drawPlaneMarks(ctx, p.frame, ox, oy, EXPORT_CELL);
+
+      ctx.fillStyle = '#9a9cab';
+      ctx.font = '600 13px ui-monospace, Menlo, Consolas, monospace';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText('points ' + p.combo.map(function (n) { return n + 1; }).join(' · '),
+        ox, oy + EXPORT_CELL + 6);
+    });
+
+    sheet.toBlob(function (blob) {
+      if (!blob) return;
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'colorcraft-planes-' + model.id + '.png';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+
+      toast.textContent = 'Saved ' + planes.length +
+        (planes.length === 1 ? ' plane' : ' planes');
+      toast.classList.remove('hidden');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () { toast.classList.add('hidden'); }, 1600);
+    }, 'image/png');
   }
 
   /* ------------------------------------------------------------- anchors */

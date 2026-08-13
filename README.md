@@ -139,7 +139,9 @@ effect unless there is a cut to show.
 
 With four or more points, every combination of three becomes its own plane. Five
 points give ten cuts, and the thumbnail grid lets you flip between them — each is
-a genuinely different cross-section. Combinations are capped at 40 so a long
+a genuinely different cross-section. **Export planes as PNG** saves them all to
+one sheet, four to a row, each face at 320px and labelled with the points that
+cut it, carrying the same border and rings as the app draws. Combinations are capped at 40 so a long
 point list cannot detonate into hundreds of rasters. Three collinear points
 define no plane; that combination is marked rather than silently skipped.
 
