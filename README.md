@@ -5,12 +5,8 @@ No build step, no dependencies, no server — open `index.html` and it runs.
 
 **[Try it →](https://square-atom.github.io/Colorcraft/)**
 
-<!--
-  A screenshot belongs here and makes a big difference on GitHub.
-  Save one as docs/screenshot.png and uncomment:
 
-  ![Colorcraft](docs/screenshot.png)
--->
+![Colorcraft](docs/screenshot.png)
 
 Hue runs around the circle, chroma outward from a neutral core, lightness bottom
 to top — black at the floor, white at the ceiling.
