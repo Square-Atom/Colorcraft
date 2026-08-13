@@ -577,10 +577,6 @@
       refs = [];
       editorSync = null;
 
-      var add = el('button', 'btn add', '+ Add point');
-      add.addEventListener('click', addPoint);
-      row.appendChild(add);
-
       state.anchors.forEach(function (a, idx) {
         var selected = idx === state.selected;
         var item = el('div', 'anchor' + (selected ? ' on' : ''));
@@ -607,6 +603,10 @@
         refs.push({ chip: chip, hex: hex });
         row.appendChild(item);
       });
+
+      var add = el('button', 'btn add', '+ Add point');
+      add.addEventListener('click', addPoint);
+      row.appendChild(add);
 
       if (state.anchors.length) {
         var clear = el('button', 'btn', 'Clear all points');

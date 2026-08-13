@@ -465,7 +465,7 @@ body.panel-hidden #panelToggle { left: 12px; }
 
 .anchors { display: flex; flex-direction: column; gap: 5px; }
 
-.anchors .add { margin-bottom: 2px; }
+.anchors .add { margin-top: 2px; }
 
 .anchor {
   background: #1c1d24;
