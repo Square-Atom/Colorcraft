@@ -309,6 +309,15 @@ input[type=color] {
 
 .edge-toggle:hover { border-color: var(--accent); color: var(--accent); }
 
+/* Lit while its panel is showing, matching the palette's tab rail. */
+.edge-toggle.on {
+  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.edge-toggle.on:hover { color: #fff; }
+
 #toggleLeft { left: 324px; }
 body.left-hidden #toggleLeft { left: 12px; }
 

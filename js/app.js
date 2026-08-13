@@ -1083,18 +1083,30 @@
   function togglePanel(side, force) {
     var cls = side + '-hidden';
     document.body.classList.toggle(cls, force);
+    syncToggles();
     dirty = true;
+  }
+
+  /* A button is lit only while the panel it opens is actually showing, so the
+   * rail reads as what is on screen rather than what was last picked. */
+  function syncToggles() {
+    var rightShown = !document.body.classList.contains('right-hidden');
+
+    document.getElementById('toggleLeft')
+      .classList.toggle('on', !document.body.classList.contains('left-hidden'));
+
+    Array.prototype.forEach.call(document.querySelectorAll('.vtab'), function (b) {
+      b.classList.toggle('on', rightShown && b.getAttribute('data-rtab') === rightTab);
+    });
   }
 
   var rightTab = 'palette';
 
   function applyRightTab() {
-    Array.prototype.forEach.call(document.querySelectorAll('.vtab'), function (b) {
-      b.classList.toggle('on', b.getAttribute('data-rtab') === rightTab);
-    });
     Array.prototype.forEach.call(document.querySelectorAll('.rtabpanel'), function (p) {
       p.classList.toggle('hidden', p.getAttribute('data-rtab') !== rightTab);
     });
+    syncToggles();
     syncPanel();
   }
 
