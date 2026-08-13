@@ -130,6 +130,9 @@
       /* Points the user put there are never filtered away -- having a colour you
        * typed silently vanish behind a slider would be baffling. */
       if (kind < KIND.RAMP) {
+        /* Guarded on the cut actually existing, so the option can never leave
+         * an empty view with nothing to explain why. */
+        if (s.soloPlane && cloud.hasSlice) continue;
         if (L < s.lMin || L > s.lMax) continue;
         if (C < s.cMin || C > s.cMax) continue;
         if (inCut(hAng, s.cutStart, s.cutSize)) continue;

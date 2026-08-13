@@ -34,6 +34,7 @@
     this.kind = [];
     this.clipped = [];
     this.hasOuter = false;
+    this.hasSlice = false;
     /* Tracked so the camera can frame whatever was built. A wide-gamut envelope
      * reaches well past the sRGB solid, and a fixed distance would clip it. */
     this.maxC = 0;
@@ -52,6 +53,7 @@
     this.kind.push(kind || 0);
     this.clipped.push(clipped ? 1 : 0);
     if (kind === KIND.ENVELOPE) this.hasOuter = true;
+    if (kind === KIND.SLICE) this.hasSlice = true;
 
     if (C > this.maxC) this.maxC = C;
     var y = Math.abs(L - 0.5);
@@ -68,6 +70,7 @@
       kind: new Uint8Array(this.kind),
       clipped: new Uint8Array(this.clipped),
       hasOuter: this.hasOuter,
+      hasSlice: this.hasSlice,
       maxC: this.maxC || 1,
       maxY: this.maxY || 0.5
     };

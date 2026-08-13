@@ -106,10 +106,17 @@ passed outside the gamut, which is what gives each cut its silhouette. The three
 colors are ringed on it and the triangle they bound is outlined. Turn on **Show
 the cut in 3D** to see the same face embedded in the solid it came from.
 
+Two options narrow what you see, and they stack:
+
 **Hide color outside the border** clips the face to that triangle, so the three
 points bound the slice as well as orienting it. The border is drawn either way,
 so you can see what turning it on would cut away before you do. Clipping applies
 to the thumbnails and the 3D cut too, not just the flat view.
+
+**Hide color outside the plane** drops the solid entirely, leaving the cut alone
+in space. The axis and equator stay, so it keeps its bearings — rotate to see the
+plane edge on. This one is render-only, so it toggles instantly, and it has no
+effect unless there is a cut to show.
 
 With four or more points, every combination of three becomes its own plane. Five
 points give ten cuts, and the thumbnail grid lets you flip between them — each is

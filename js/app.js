@@ -36,6 +36,7 @@
     planeIndex: 0,
     sliceIn3D: true,
     sliceClip: false,
+    soloPlane: false,
     slice3DRes: 58,
 
     /* the add-a-color picker */
@@ -206,6 +207,8 @@
       label: 'Hide color outside the border', rebuild: true, when: hasPlane },
     { sec: 'planes', type: 'check', key: 'sliceIn3D', label: 'Show the cut in 3D',
       rebuild: true, when: hasPlane },
+    { sec: 'planes', type: 'check', key: 'soloPlane', label: 'Hide color outside the plane',
+      when: function () { return hasPlane() && state.sliceIn3D; } },
     { sec: 'planes', type: 'range', key: 'slice3DRes', label: 'Cut density in 3D',
       min: 16, max: 110, step: 1, rebuild: true,
       when: function () { return hasPlane() && state.sliceIn3D; } },
