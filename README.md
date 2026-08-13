@@ -3,6 +3,8 @@
 An interactive 3D view of color space, and a palette tool built on top of it.
 No build step, no dependencies, no server — open `index.html` and it runs.
 
+**[Try it →](https://square-atom.github.io/Colorcraft/)**
+
 <!--
   A screenshot belongs here and makes a big difference on GitHub.
   Save one as docs/screenshot.png and uncomment:
@@ -188,14 +190,20 @@ config is needed:
 2. **Settings → Pages → Source: Deploy from a branch**
 3. Pick your branch and **/ (root)**, then save
 
-It lands at `https://<user>.github.io/<repo>/` within a minute or two.
+It lands at `https://square-atom.github.io/Colorcraft/` within a minute or two.
 
 ### Embedding in Wix
 
 With the site live on Pages, in the Wix editor choose **Add → Embed Code →
-Embed a Site** and point it at your Pages URL. Make the element as wide and tall
-as the section allows — the two panels are 636px combined, so a narrow embed is
-worth pairing with `?panels=left` or `?panels=none`.
+Embed a Site** and point it at, for example:
+
+```
+https://square-atom.github.io/Colorcraft/?panels=none
+```
+
+Make the element as wide and tall as the section allows — the two panels are
+636px combined, so a narrow embed is worth pairing with `?panels=left` or
+`?panels=none`.
 
 Because the panels can be reopened from their buttons, `?panels=none` is usually
 the best default for a page embed: visitors get the solid, and the controls are
