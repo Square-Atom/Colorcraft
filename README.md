@@ -264,3 +264,20 @@ dependencies, so it ports to C, GLSL, or anything else more or less mechanically
 `js/models.js` is where the geometry lives. Every model exposes the same three
 operations — `toRGB`, `fromRGB`, `maxC` — so the cloud builder and renderer never
 branch on which model is active. Adding a fifth model means adding one object.
+
+## Credits
+
+The color science here is published work, not mine. This project is an interface
+onto it, and the interesting parts belong to:
+
+- **Oklab** — devised and published by [Björn Ottosson](https://bottosson.github.io/posts/oklab/)
+- **CIELAB** and the **CIE xy** chromaticity system — CIE standards
+- **The RGB ↔ XYZ matrix derivation** — the method documented by
+  [Bruce Lindbloom](http://www.brucelindbloom.com/)
+- **Gamut primaries** — from the sRGB (IEC 61966-2-1), Display P3, Adobe RGB
+  (1998) and Rec. 2020 (ITU-R BT.2020) specifications
+
+## License
+
+[MIT](LICENSE) — use it, change it, sell it, no attribution required. If any of
+it is useful to you, take it.
