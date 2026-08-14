@@ -54,7 +54,7 @@
     /* how it looks */
     pointSize: 5,
     opacity: 1,
-    depthCue: 0.35,
+    depthCue: 0,
     shape: 'round',
     radiusScale: 1.15,
     heightScale: 1.6,
