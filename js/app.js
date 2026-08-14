@@ -13,7 +13,7 @@
   var state = {
     /* what to build */
     modelId: 'oklch',
-    sampling: 'lattice',
+    sampling: 'cube',
     hueSteps: 36,
     lightSteps: 17,
     chromaSteps: 5,
